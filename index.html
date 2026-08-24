@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CMB Projekt-Cockpit</title>
+<meta name="description" content="Persönliches Kundenprojekt-Dashboard von CMB Digital.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<meta name="theme-color" content="#f0eee6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1e3a48" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  /* ── CMB Digital Token-System ─────────────────────────────── */
+  :root{
+    --petrol:#2c5163; --petrol-dark:#1e3a48; --petrol-light:#3a6a80;
+    --orange:#ff6a3f; --grad:linear-gradient(180deg,#ff863e,#ff4732);
+    --moss:#4d7a5e; --moss-light:#e8f0eb;
+    --sand:#c4a882; --sand-light:#f5efe6;
+
+    --bg:#f0eee6;
+    --card:#ffffff;
+    --card-soft:#faf9f4;
+    --ink:#1e3a48;
+    --ink-soft:#5b7280;
+    --line:#e3dfd2;
+    --pill-active-bg:#e8f0eb; --pill-active-fg:#3d6a50;
+    --pill-wait-bg:#ffece4;  --pill-wait-fg:#c94f2a;
+    --pill-review-bg:#f5efe6;--pill-review-fg:#8a6f3f;
+    --pill-done-bg:#e6ecef;  --pill-done-fg:#2c5163;
+    --shadow:0 1px 2px rgba(30,58,72,.05),0 8px 24px rgba(30,58,72,.07);
+    --shadow-lift:0 2px 4px rgba(30,58,72,.07),0 16px 40px rgba(30,58,72,.13);
+    --font-display:'Instrument Serif',Georgia,serif;
+    --font-body:'Inter',-apple-system,'Segoe UI',sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#1e3a48; --card:#274a5c; --card-soft:#224355;
+      --ink:#f0eee6; --ink-soft:#a8bcc7; --line:#37596c;
+      --pill-active-bg:#2f5947; --pill-active-fg:#a9d4ba;
+      --pill-wait-bg:#5c3325;  --pill-wait-fg:#ffb59a;
+      --pill-review-bg:#54492f;--pill-review-fg:#e3cf9e;
+      --pill-done-bg:#33566a;  --pill-done-fg:#c6d8e2;
+      --shadow:0 1px 2px rgba(0,0,0,.2),0 8px 24px rgba(0,0,0,.25);
+      --shadow-lift:0 2px 4px rgba(0,0,0,.25),0 16px 40px rgba(0,0,0,.35);
+    }
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:var(--font-body); font-size:15px; line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  button{font-family:inherit; font-size:inherit; cursor:pointer}
+  input,textarea,select{font-family:inherit; font-size:inherit; color:inherit}
+
+  .wrap{max-width:1120px; margin:0 auto; padding:32px 24px 80px}
+
+  header{display:flex; align-items:center; gap:18px; margin-bottom:6px}
+  .logo{display:grid; grid-template-columns:15px 15px; grid-template-rows:15px 15px; gap:4px; flex:none}
+  .logo span{border-radius:5px; background:var(--ink)}
+  .logo span:nth-child(2){background:var(--grad); transform:rotate(45deg) scale(.92)}
+  .brandline{font-size:12px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft); flex:1}
+  h1{font-family:var(--font-display); font-weight:400; font-size:clamp(30px,4.5vw,42px); line-height:1.1; margin:10px 0 4px; text-wrap:balance}
+  .tagline{font-family:var(--font-display); font-style:italic; color:var(--ink-soft); font-size:17px; margin:0 0 28px}
+
+  .topbar{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:20px}
+  .stats{display:flex; gap:26px}
+  .stat b{display:block; font-family:var(--font-display); font-size:28px; font-weight:400; line-height:1; font-variant-numeric:tabular-nums}
+  .stat span{font-size:12px; color:var(--ink-soft)}
+
+  .btn{
+    border:0; border-radius:12px; padding:11px 20px; font-weight:600; font-size:14px;
+    background:var(--grad); color:#fff; box-shadow:0 4px 14px rgba(255,90,50,.32);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:hover{transform:translateY(-1px); box-shadow:0 7px 18px rgba(255,90,50,.4)}
+  .btn:disabled{opacity:.6; cursor:default; transform:none}
+  .btn.ghost{background:transparent; color:var(--ink); box-shadow:none; border:1.5px solid var(--line)}
+  .btn.ghost:hover{border-color:var(--ink-soft); transform:none}
+  .btn.small{padding:8px 14px; font-size:13px; border-radius:10px}
+  .btn.danger{background:transparent; color:var(--pill-wait-fg); box-shadow:none; border:1.5px solid transparent; font-weight:500}
+  .btn.danger:hover{border-color:var(--pill-wait-fg); transform:none}
+  .btn.linklike{background:none; border:0; box-shadow:none; color:var(--ink-soft); text-decoration:underline; font-weight:500; padding:6px}
+
+  /* ── Login ────────────────────────────────────────────────── */
+  .auth{min-height:100svh; display:grid; place-items:center; padding:24px}
+  .auth-box{
+    width:min(400px,100%); background:var(--card); border-radius:24px; padding:34px 30px;
+    box-shadow:var(--shadow-lift); display:flex; flex-direction:column; gap:14px;
+  }
+  .auth-box .logo{margin-bottom:4px}
+  .auth-box h1{font-size:30px; margin:0}
+  .auth-box p{margin:0 0 6px; color:var(--ink-soft); font-size:14px}
+  .auth-box label{font-size:13px; font-weight:600; display:block; margin-bottom:6px}
+  .auth-box input{
+    width:100%; border:1.5px solid var(--line); background:var(--card-soft); border-radius:11px;
+    padding:12px 14px; outline:none;
+  }
+  .auth-box input:focus{border-color:var(--orange)}
+  .auth-msg{font-size:13.5px; border-radius:10px; padding:10px 12px; display:none}
+  .auth-msg.err{display:block; background:var(--pill-wait-bg); color:var(--pill-wait-fg)}
+  .auth-msg.ok{display:block; background:var(--pill-active-bg); color:var(--pill-active-fg)}
+
+  /* ── Kachel-Grid ──────────────────────────────────────────── */
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:18px}
+  .tile{
+    background:var(--card); border-radius:20px; padding:22px 22px 18px;
+    box-shadow:var(--shadow); border:1px solid transparent; text-align:left;
+    display:flex; flex-direction:column; gap:14px; color:inherit;
+    transition:transform .18s ease, box-shadow .18s ease;
+  }
+  .tile:hover{transform:translateY(-3px); box-shadow:var(--shadow-lift)}
+  .tile:focus-visible{outline:2px solid var(--orange); outline-offset:3px}
+  .tile-top{display:flex; align-items:flex-start; gap:14px}
+  .avatar{
+    width:44px; height:44px; flex:none; border-radius:14px;
+    background:var(--grad); transform:rotate(45deg);
+    display:grid; place-items:center; margin:2px 4px 0 2px;
+  }
+  .avatar b{transform:rotate(-45deg); color:#fff; font-size:13px; font-weight:700; letter-spacing:.02em}
+  .avatar.calm{background:var(--petrol)}
+  .tile h2{font-family:var(--font-display); font-weight:400; font-size:21px; margin:0; line-height:1.2}
+  .tile .sub{font-size:13px; color:var(--ink-soft); margin-top:2px}
+  .pill{display:inline-block; font-size:12px; font-weight:600; padding:4px 11px; border-radius:99px; white-space:nowrap}
+  .pill.aktiv{background:var(--pill-active-bg); color:var(--pill-active-fg)}
+  .pill.wartet{background:var(--pill-wait-bg); color:var(--pill-wait-fg)}
+  .pill.abstimmung{background:var(--pill-review-bg); color:var(--pill-review-fg)}
+  .pill.fertig{background:var(--pill-done-bg); color:var(--pill-done-fg)}
+  .tile-meta{display:flex; align-items:center; justify-content:space-between; gap:10px; border-top:1px solid var(--line); padding-top:13px; font-size:13px; color:var(--ink-soft)}
+  .bar{flex:1; height:5px; border-radius:99px; background:var(--line); overflow:hidden; max-width:120px}
+  .bar i{display:block; height:100%; border-radius:99px; background:var(--moss); transition:width .3s ease}
+  .tile-meta .count{font-variant-numeric:tabular-nums; white-space:nowrap}
+
+  .tile.add{
+    border:2px dashed var(--line); background:transparent; box-shadow:none;
+    align-items:center; justify-content:center; min-height:170px; gap:8px; color:var(--ink-soft);
+  }
+  .tile.add:hover{border-color:var(--orange); color:var(--orange); transform:none}
+  .tile.add .plus{font-size:30px; line-height:1; font-weight:300}
+
+  .empty-state{
+    grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--ink-soft);
+    display:flex; flex-direction:column; align-items:center; gap:16px;
+  }
+  .empty-state p{margin:0; max-width:420px}
+
+  /* ── Detailansicht (Slide-over) ───────────────────────────── */
+  .overlay{position:fixed; inset:0; background:rgba(20,38,48,.45); backdrop-filter:blur(3px); opacity:0; pointer-events:none; transition:opacity .22s ease; z-index:40}
+  .overlay.open{opacity:1; pointer-events:auto}
+  .panel{
+    position:fixed; top:0; right:0; bottom:0; width:min(560px,100%);
+    background:var(--bg); z-index:50; transform:translateX(102%);
+    transition:transform .28s cubic-bezier(.32,.72,.35,1);
+    display:flex; flex-direction:column; box-shadow:-24px 0 60px rgba(20,38,48,.25);
+  }
+  .panel.open{transform:none}
+  .panel-head{padding:26px 28px 18px; border-bottom:1px solid var(--line); background:var(--card-soft)}
+  .panel-head .row{display:flex; align-items:flex-start; justify-content:space-between; gap:12px}
+  .panel-head h2{font-family:var(--font-display); font-weight:400; font-size:28px; margin:0 0 2px; line-height:1.15}
+  .panel-head .sub{color:var(--ink-soft); font-size:13px}
+  .iconbtn{border:0; background:transparent; color:var(--ink-soft); font-size:22px; line-height:1; padding:6px 10px; border-radius:10px}
+  .iconbtn:hover{background:var(--line); color:var(--ink)}
+  .statusrow{display:flex; align-items:center; gap:10px; margin-top:14px; flex-wrap:wrap}
+  select.status{
+    border:1.5px solid var(--line); background:var(--card); border-radius:10px;
+    padding:7px 12px; font-size:13px; font-weight:600;
+  }
+  .panel-body{flex:1; overflow-y:auto; padding:22px 28px 40px; display:flex; flex-direction:column; gap:26px}
+
+  .section h3{
+    font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--ink-soft); margin:0 0 12px; display:flex; align-items:center; gap:8px;
+  }
+  .section h3::after{content:""; flex:1; height:1px; background:var(--line)}
+
+  .todo{display:flex; align-items:center; gap:12px; background:var(--card); border-radius:12px; padding:11px 14px; margin-bottom:8px; box-shadow:var(--shadow)}
+  .todo input[type=checkbox]{width:19px; height:19px; accent-color:var(--moss); flex:none; cursor:pointer}
+  .todo span{flex:1}
+  .todo.done span{text-decoration:line-through; color:var(--ink-soft)}
+  .todo .del{border:0; background:none; color:var(--ink-soft); font-size:16px; padding:2px 6px; border-radius:8px; opacity:.55}
+  .todo .del:hover{opacity:1; color:var(--pill-wait-fg)}
+
+  .addrow{display:flex; gap:8px; margin-top:10px}
+  .addrow input[type=text], .addrow input[type=url]{
+    flex:1; border:1.5px solid var(--line); background:var(--card); border-radius:11px;
+    padding:10px 14px; outline:none; min-width:0;
+  }
+  .addrow input:focus{border-color:var(--orange)}
+
+  .note{background:var(--card); border-radius:14px; padding:14px 16px; margin-bottom:10px; box-shadow:var(--shadow); border-left:3px solid var(--sand)}
+  .note p{margin:0; white-space:pre-wrap}
+  .note .meta{display:flex; justify-content:space-between; align-items:center; margin-top:8px; font-size:12px; color:var(--ink-soft)}
+  textarea.input{
+    width:100%; border:1.5px solid var(--line); background:var(--card); border-radius:12px;
+    padding:12px 14px; min-height:74px; resize:vertical; outline:none; line-height:1.5;
+  }
+  textarea.input:focus{border-color:var(--orange)}
+  .note .meta button, .doc .meta button, .transcript-head button{
+    border:0; background:none; color:var(--ink-soft); font-size:12px; padding:2px 4px; text-decoration:underline;
+  }
+  .note .meta button:hover{color:var(--pill-wait-fg)}
+
+  .doc{display:flex; align-items:center; gap:12px; background:var(--card); border-radius:12px; padding:11px 14px; margin-bottom:8px; box-shadow:var(--shadow); text-decoration:none; color:inherit}
+  .doc:hover{box-shadow:var(--shadow-lift)}
+  .doc .ic{width:34px; height:34px; flex:none; border-radius:10px; background:var(--pill-review-bg); color:var(--pill-review-fg); display:grid; place-items:center; font-size:15px}
+  .doc b{display:block; font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .doc small{color:var(--ink-soft); font-size:12px; overflow-wrap:anywhere}
+  .doc>div{flex:1; min-width:0}
+  .doc .meta{flex:none}
+
+  .transcript{background:var(--card); border-radius:14px; margin-bottom:10px; box-shadow:var(--shadow); overflow:hidden}
+  .transcript-head{display:flex; align-items:center; gap:10px; padding:12px 16px; cursor:pointer}
+  .transcript-head b{flex:1; font-weight:600; font-size:14px}
+  .transcript-head small{color:var(--ink-soft); white-space:nowrap}
+  .transcript-body{display:none; padding:12px 16px 14px; color:var(--ink-soft); font-size:13.5px; white-space:pre-wrap; max-height:300px; overflow-y:auto; border-top:1px solid var(--line)}
+  .transcript.open .transcript-body{display:block}
+  .tr-form{display:none; flex-direction:column; gap:8px; margin-top:10px}
+  .tr-form.open{display:flex}
+  .tr-form input[type=text]{border:1.5px solid var(--line); background:var(--card); border-radius:11px; padding:10px 14px; outline:none}
+  .tr-form input:focus, .tr-form textarea:focus{border-color:var(--orange)}
+
+  .empty{color:var(--ink-soft); font-size:13.5px; font-style:italic; padding:4px 2px}
+
+  .modal{position:fixed; inset:0; z-index:60; display:none; place-items:center; padding:20px}
+  .modal.open{display:grid}
+  .modal .backdrop{position:absolute; inset:0; background:rgba(20,38,48,.5); backdrop-filter:blur(3px)}
+  .modal .box{
+    position:relative; background:var(--bg); border-radius:22px; padding:28px;
+    width:min(440px,100%); box-shadow:var(--shadow-lift); display:flex; flex-direction:column; gap:14px;
+  }
+  .modal h2{font-family:var(--font-display); font-weight:400; font-size:26px; margin:0}
+  .modal label{font-size:13px; font-weight:600; display:block; margin-bottom:6px}
+  .modal input[type=text], .modal input[type=password], .modal select{
+    width:100%; border:1.5px solid var(--line); background:var(--card); border-radius:11px;
+    padding:11px 14px; outline:none;
+  }
+  .modal input:focus{border-color:var(--orange)}
+  .modal .actions{display:flex; justify-content:flex-end; gap:10px; margin-top:6px}
+
+  .toast{
+    position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(80px);
+    background:var(--petrol-dark); color:#f0eee6; padding:11px 20px; border-radius:12px;
+    font-size:13.5px; box-shadow:var(--shadow-lift); z-index:80; opacity:0;
+    transition:transform .25s ease, opacity .25s ease; pointer-events:none; max-width:90vw;
+  }
+  .toast.show{transform:translateX(-50%); opacity:1}
+  .toast.err{background:#8a3018}
+
+  .loading{display:grid; place-items:center; min-height:40vh; color:var(--ink-soft); font-style:italic; font-family:var(--font-display); font-size:18px}
+
+  footer{margin-top:56px; text-align:center; color:var(--ink-soft); font-size:12.5px}
+  footer em{font-family:var(--font-display); font-style:italic; font-size:14px}
+
+  [hidden]{display:none !important}
+
+  @media (max-width:560px){
+    .wrap{padding:24px 16px 60px}
+    .panel-body,.panel-head{padding-left:18px; padding-right:18px}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important}
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ Login ═══ -->
+<div class="auth" id="viewAuth" hidden>
+  <div class="auth-box">
+    <div class="logo" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+    <h1 id="authTitle">Anmelden</h1>
+    <p id="authIntro">CMB Projekt-Cockpit · privater Bereich</p>
+    <div class="auth-msg" id="authMsg"></div>
+    <div>
+      <label for="authEmail">E-Mail</label>
+      <input type="email" id="authEmail" autocomplete="username" placeholder="name@beispiel.de">
+    </div>
+    <div>
+      <label for="authPass">Passwort</label>
+      <input type="password" id="authPass" autocomplete="current-password" placeholder="••••••••">
+    </div>
+    <button class="btn" id="authSubmit">Anmelden</button>
+    <button class="btn linklike" id="authToggle">Erstes Mal hier? Konto anlegen</button>
+    <button class="btn linklike" id="authForgot">Passwort vergessen?</button>
+  </div>
+</div>
+
+<!-- ═══ Dashboard ═══ -->
+<div class="wrap" id="viewApp" hidden>
+  <header>
+    <div class="logo" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+    <div class="brandline">CMB Digital · Projekt-Cockpit</div>
+    <button class="btn ghost small" id="btnLogout">Abmelden</button>
+  </header>
+  <h1>Guten Tag, Hans-Jörg.</h1>
+  <p class="tagline">Klar denken, besser handeln.</p>
+
+  <div class="topbar">
+    <div class="stats">
+      <div class="stat"><b id="statProjects">0</b><span>Projekte</span></div>
+      <div class="stat"><b id="statOpen">0</b><span>offene To-dos</span></div>
+      <div class="stat"><b id="statActive">0</b><span>aktiv</span></div>
+    </div>
+    <button class="btn" id="btnNew">+ Neues Projekt</button>
+  </div>
+
+  <div class="loading" id="loading">Projekte werden geladen …</div>
+  <div class="grid" id="grid" hidden></div>
+
+  <footer>CMB Digital · Trier &amp; Mallorca · <em>Klar denken, besser handeln.</em></footer>
+</div>
+
+<!-- Slide-over Detail -->
+<div class="overlay" id="overlay"></div>
+<aside class="panel" id="panel" aria-label="Projektdetails">
+  <div class="panel-head">
+    <div class="row">
+      <div>
+        <h2 id="pTitle"></h2>
+        <div class="sub" id="pSub"></div>
+      </div>
+      <button class="iconbtn" id="btnClose" aria-label="Schließen">×</button>
+    </div>
+    <div class="statusrow">
+      <select class="status" id="pStatus">
+        <option value="aktiv">● Aktiv</option>
+        <option value="abstimmung">● In Abstimmung</option>
+        <option value="wartet">● Wartet auf Kunde</option>
+        <option value="fertig">● Fertig</option>
+      </select>
+      <button class="btn danger small" id="btnDelete">Projekt löschen</button>
+    </div>
+  </div>
+  <div class="panel-body">
+
+    <div class="section">
+      <h3>To-dos</h3>
+      <div id="todoList"></div>
+      <div class="addrow">
+        <input type="text" id="todoInput" placeholder="Neue Aufgabe … (Enter)" maxlength="200">
+        <button class="btn small" id="todoAdd">Hinzufügen</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Notizen</h3>
+      <div id="noteList"></div>
+      <textarea class="input" id="noteInput" placeholder="Notiz schreiben …"></textarea>
+      <div class="addrow" style="justify-content:flex-end; margin-top:8px">
+        <button class="btn small" id="noteAdd">Notiz speichern</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Google&nbsp;Drive &amp; Dokumente</h3>
+      <div id="docList"></div>
+      <div class="addrow">
+        <input type="url" id="docUrl" placeholder="Drive-Link einfügen (https://…)">
+        <button class="btn small" id="docAdd">Verknüpfen</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Transkripte</h3>
+      <div id="trList"></div>
+      <button class="btn ghost small" id="trToggle">+ Transkript hinzufügen</button>
+      <div class="tr-form" id="trForm">
+        <input type="text" id="trTitle" placeholder="Titel, z. B. „Kundengespräch 24.08.“" maxlength="120">
+        <textarea class="input" id="trText" placeholder="Transkript oder Gesprächsnotiz hier einfügen …" style="min-height:120px"></textarea>
+        <div style="display:flex; justify-content:flex-end; gap:8px">
+          <button class="btn ghost small" id="trCancel">Abbrechen</button>
+          <button class="btn small" id="trSave">Speichern</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</aside>
+
+<!-- Neues Projekt -->
+<div class="modal" id="modal">
+  <div class="backdrop" id="modalBackdrop"></div>
+  <div class="box">
+    <h2>Neues Projekt</h2>
+    <div>
+      <label for="npName">Projektname</label>
+      <input type="text" id="npName" placeholder="z. B. Müller GmbH – Website" maxlength="80">
+    </div>
+    <div>
+      <label for="npSub">Kunde / Kurzbeschreibung</label>
+      <input type="text" id="npSub" placeholder="z. B. Relaunch mit SEO-Fokus" maxlength="120">
+    </div>
+    <div>
+      <label for="npStatus">Status</label>
+      <select id="npStatus">
+        <option value="aktiv">Aktiv</option>
+        <option value="abstimmung">In Abstimmung</option>
+        <option value="wartet">Wartet auf Kunde</option>
+        <option value="fertig">Fertig</option>
+      </select>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="npCancel">Abbrechen</button>
+      <button class="btn" id="npSave">Anlegen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Neues Passwort (nach „Passwort vergessen“) -->
+<div class="modal" id="pwModal">
+  <div class="backdrop"></div>
+  <div class="box">
+    <h2>Neues Passwort festlegen</h2>
+    <div>
+      <label for="pwNew">Neues Passwort (mind. 8 Zeichen)</label>
+      <input type="password" id="pwNew" autocomplete="new-password">
+    </div>
+    <div class="actions">
+      <button class="btn" id="pwSave">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ── Supabase ── */
+  var SUPABASE_URL = "https://aklglucdxeactfkczmtb.supabase.co";
+  var SUPABASE_KEY = "sb_publishable__HERJ6k8tLNkdVjoB690vA_yyRb-I8W"; // öffentlicher Schlüssel – Daten sind per Row-Level-Security geschützt
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  var TABLE = "cockpit_projects";
+
+  var STATUS_LABEL = {aktiv:"Aktiv", abstimmung:"In Abstimmung", wartet:"Wartet auf Kunde", fertig:"Fertig"};
+
+  function uid(){ return Math.random().toString(36).slice(2,10); }
+  function now(){ return Date.now(); }
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function fmtDate(ts){
+    return new Date(ts).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});
+  }
+  function initials(name){
+    var parts = name.trim().split(/\s+/).filter(Boolean);
+    if(!parts.length) return "?";
+    if(parts.length===1) return parts[0].slice(0,2).toUpperCase();
+    return (parts[0][0]+parts[1][0]).toUpperCase();
+  }
+
+  var toastEl = document.getElementById("toast"), toastTimer = null;
+  function toast(msg, isErr){
+    toastEl.textContent = msg;
+    toastEl.classList.toggle("err", !!isErr);
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove("show"); }, 3200);
+  }
+
+  /* ── Ansichten ── */
+  var viewAuth = document.getElementById("viewAuth");
+  var viewApp  = document.getElementById("viewApp");
+  function show(view){
+    viewAuth.hidden = view!=="auth";
+    viewApp.hidden  = view!=="app";
+  }
+
+  /* ── Auth ── */
+  var authMode = "login"; // login | signup
+  var authMsg = document.getElementById("authMsg");
+  function setAuthMsg(text, ok){
+    authMsg.className = "auth-msg " + (text ? (ok?"ok":"err") : "");
+    authMsg.textContent = text || "";
+  }
+  document.getElementById("authToggle").addEventListener("click", function(){
+    authMode = authMode==="login" ? "signup" : "login";
+    document.getElementById("authTitle").textContent = authMode==="login" ? "Anmelden" : "Konto anlegen";
+    document.getElementById("authSubmit").textContent = authMode==="login" ? "Anmelden" : "Konto anlegen";
+    this.textContent = authMode==="login" ? "Erstes Mal hier? Konto anlegen" : "Zurück zur Anmeldung";
+    document.getElementById("authForgot").hidden = authMode!=="login";
+    setAuthMsg("");
+  });
+  document.getElementById("authForgot").addEventListener("click", function(){
+    var email = document.getElementById("authEmail").value.trim();
+    if(!email){ setAuthMsg("Bitte zuerst deine E-Mail-Adresse eintragen."); return; }
+    sb.auth.resetPasswordForEmail(email, {redirectTo: location.href.split("#")[0]}).then(function(r){
+      if(r.error) setAuthMsg(übersetzeFehler(r.error));
+      else setAuthMsg("E-Mail zum Zurücksetzen wurde verschickt – bitte Posteingang prüfen.", true);
+    });
+  });
+  function übersetzeFehler(error){
+    var m = (error && error.message) || "Unbekannter Fehler";
+    if(/invalid login credentials/i.test(m)) return "E-Mail oder Passwort ist falsch.";
+    if(/email not confirmed/i.test(m)) return "Bitte zuerst den Bestätigungslink in deiner E-Mail anklicken.";
+    if(/already registered/i.test(m)) return "Für diese E-Mail gibt es schon ein Konto – bitte anmelden.";
+    if(/at least 6|password/i.test(m)) return "Das Passwort ist zu kurz (mindestens 6 Zeichen).";
+    if(/rate limit/i.test(m)) return "Zu viele Versuche – bitte kurz warten.";
+    return m;
+  }
+  function doAuth(){
+    var email = document.getElementById("authEmail").value.trim();
+    var pass  = document.getElementById("authPass").value;
+    if(!email || !pass){ setAuthMsg("Bitte E-Mail und Passwort eintragen."); return; }
+    var btn = document.getElementById("authSubmit");
+    btn.disabled = true; setAuthMsg("");
+    var done = function(){ btn.disabled = false; };
+    if(authMode==="login"){
+      sb.auth.signInWithPassword({email:email, password:pass}).then(function(r){
+        done();
+        if(r.error) setAuthMsg(übersetzeFehler(r.error));
+      });
+    }else{
+      sb.auth.signUp({email:email, password:pass, options:{emailRedirectTo: location.href.split("#")[0]}}).then(function(r){
+        done();
+        if(r.error){ setAuthMsg(übersetzeFehler(r.error)); return; }
+        if(r.data && r.data.session){ return; } // direkt eingeloggt (Bestätigung deaktiviert)
+        setAuthMsg("Fast geschafft! Bitte den Bestätigungslink in deiner E-Mail anklicken und danach hier anmelden.", true);
+      });
+    }
+  }
+  document.getElementById("authSubmit").addEventListener("click", doAuth);
+  document.getElementById("authPass").addEventListener("keydown", function(e){ if(e.key==="Enter") doAuth(); });
+
+  document.getElementById("btnLogout").addEventListener("click", function(){
+    sb.auth.signOut().then(function(){ data = []; show("auth"); });
+  });
+
+  /* Passwort-Wiederherstellung */
+  var pwModal = document.getElementById("pwModal");
+  document.getElementById("pwSave").addEventListener("click", function(){
+    var p = document.getElementById("pwNew").value;
+    if(p.length < 8){ toast("Bitte mindestens 8 Zeichen.", true); return; }
+    sb.auth.updateUser({password:p}).then(function(r){
+      if(r.error){ toast(übersetzeFehler(r.error), true); return; }
+      pwModal.classList.remove("open");
+      toast("Passwort gespeichert.");
+    });
+  });
+
+  sb.auth.onAuthStateChange(function(event, session){
+    if(event === "PASSWORD_RECOVERY"){ pwModal.classList.add("open"); return; }
+    if(session){ show("app"); loadProjects(); }
+    else{ show("auth"); }
+  });
+
+  /* ── Daten ── */
+  var data = [];        // [{id, name, sub, status, data:{todos,notes,docs,transcripts}, updated_at}]
+  var currentId = null;
+  var loadingEl = document.getElementById("loading");
+  var grid = document.getElementById("grid");
+
+  function current(){
+    for(var i=0;i<data.length;i++){ if(data[i].id===currentId) return data[i]; }
+    return null;
+  }
+
+  function loadProjects(){
+    loadingEl.hidden = false; grid.hidden = true;
+    sb.from(TABLE).select("*").order("created_at",{ascending:true}).then(function(r){
+      loadingEl.hidden = true; grid.hidden = false;
+      if(r.error){
+        toast("Projekte konnten nicht geladen werden: "+r.error.message, true);
+        return;
+      }
+      data = r.data || [];
+      renderGrid();
+    });
+  }
+
+  function persist(p){
+    p.updated_at = new Date().toISOString();
+    sb.from(TABLE).update({name:p.name, sub:p.sub, status:p.status, data:p.data, updated_at:p.updated_at})
+      .eq("id", p.id).then(function(r){
+        if(r.error) toast("Speichern fehlgeschlagen – bitte Internetverbindung prüfen.", true);
+      });
+  }
+
+  /* ── Grid ── */
+  function renderGrid(){
+    var html = "";
+    if(!data.length){
+      html += '<div class="empty-state">'
+        + '<p>Noch keine Projekte. Lege dein erstes Projekt an – oder übernimm deine aktuellen Kundenprojekte als Startpaket.</p>'
+        + '<div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center">'
+        + '<button class="btn" id="btnSeed">Meine aktuellen Projekte anlegen</button>'
+        + '<button class="btn ghost" id="btnFirst">+ Neues Projekt</button>'
+        + '</div></div>';
+    }else{
+      data.forEach(function(p){
+        var d = p.data || {todos:[],notes:[],docs:[],transcripts:[]};
+        var open = d.todos.filter(function(t){return !t.done;}).length;
+        var total = d.todos.length;
+        var pct = total ? Math.round((total-open)/total*100) : 0;
+        var countText = total ? (total-open)+" / "+total+" erledigt" : "keine To-dos";
+        html += '<button class="tile" data-id="'+p.id+'">'
+          + '<div class="tile-top">'
+          +   '<div class="avatar'+(p.status==="fertig"?" calm":"")+'"><b>'+esc(initials(p.name))+'</b></div>'
+          +   '<div style="flex:1;min-width:0"><h2>'+esc(p.name)+'</h2><div class="sub">'+esc(p.sub||"")+'</div></div>'
+          +   '<span class="pill '+esc(p.status)+'">'+(STATUS_LABEL[p.status]||p.status)+'</span>'
+          + '</div>'
+          + '<div class="tile-meta">'
+          +   '<div class="bar"><i style="width:'+pct+'%"></i></div>'
+          +   '<span class="count">'+countText+'</span>'
+          + '</div>'
+          + '</button>';
+      });
+      html += '<button class="tile add" id="tileAdd"><span class="plus">+</span><span>Neues Projekt anlegen</span></button>';
+    }
+    grid.innerHTML = html;
+
+    grid.querySelectorAll(".tile[data-id]").forEach(function(el){
+      el.addEventListener("click", function(){ openPanel(el.getAttribute("data-id")); });
+    });
+    var addBtn = document.getElementById("tileAdd");
+    if(addBtn) addBtn.addEventListener("click", openModal);
+    var firstBtn = document.getElementById("btnFirst");
+    if(firstBtn) firstBtn.addEventListener("click", openModal);
+    var seedBtn = document.getElementById("btnSeed");
+    if(seedBtn) seedBtn.addEventListener("click", seedProjects);
+
+    document.getElementById("statProjects").textContent = data.length;
+    var allOpen = 0, active = 0;
+    data.forEach(function(p){
+      var d = p.data || {todos:[]};
+      allOpen += (d.todos||[]).filter(function(t){return !t.done;}).length;
+      if(p.status==="aktiv") active++;
+    });
+    document.getElementById("statOpen").textContent = allOpen;
+    document.getElementById("statActive").textContent = active;
+  }
+
+  function emptyData(){ return {todos:[],notes:[],docs:[],transcripts:[]}; }
+
+  function seedProjects(){
+    var btn = document.getElementById("btnSeed");
+    if(btn) btn.disabled = true;
+    var rows = [
+      {name:"LegalUnion", sub:"Kanzlei-Website Trier–Luxemburg · legalunion.eu", status:"aktiv"},
+      {name:"immovia Trier", sub:"Zwei statische Websites · Immobilien", status:"aktiv"},
+      {name:"Extracom", sub:"Relaunch trockene-mauern.ch · EDS-System (CH)", status:"abstimmung"},
+      {name:"SE Kfz-Gutachter", sub:"Relaunch se-kfzgutachter.de", status:"aktiv"},
+      {name:"Lebensberatung Joost", sub:"Redesign lebensberatung-joost.de", status:"wartet"},
+      {name:"eivii", sub:"KI-Voice-Agent · SPRINT-System", status:"aktiv"}
+    ].map(function(r){ r.data = emptyData(); return r; });
+    sb.from(TABLE).insert(rows).select().then(function(r){
+      if(r.error){ toast("Anlegen fehlgeschlagen: "+r.error.message, true); if(btn) btn.disabled=false; return; }
+      data = data.concat(r.data);
+      renderGrid();
+      toast("6 Projekte angelegt.");
+    });
+  }
+
+  /* ── Panel ── */
+  var overlay = document.getElementById("overlay");
+  var panel = document.getElementById("panel");
+  function openPanel(id){
+    currentId = id;
+    var p = current(); if(!p) return;
+    if(!p.data) p.data = emptyData();
+    document.getElementById("pTitle").textContent = p.name;
+    document.getElementById("pSub").textContent = p.sub||"";
+    document.getElementById("pStatus").value = p.status;
+    renderTodos(); renderNotes(); renderDocs(); renderTranscripts();
+    overlay.classList.add("open"); panel.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+  function closePanel(){
+    overlay.classList.remove("open"); panel.classList.remove("open");
+    document.body.style.overflow = "";
+    currentId = null;
+    renderGrid();
+  }
+  overlay.addEventListener("click", closePanel);
+  document.getElementById("btnClose").addEventListener("click", closePanel);
+  var modal = document.getElementById("modal");
+  document.addEventListener("keydown", function(e){
+    if(e.key==="Escape"){
+      if(modal.classList.contains("open")) closeModal();
+      else if(panel.classList.contains("open")) closePanel();
+    }
+  });
+
+  document.getElementById("pStatus").addEventListener("change", function(){
+    var p = current(); if(!p) return;
+    p.status = this.value; persist(p);
+  });
+
+  document.getElementById("btnDelete").addEventListener("click", function(){
+    var p = current(); if(!p) return;
+    if(confirm('Projekt "'+p.name+'" wirklich löschen? Alle Notizen, To-dos und Transkripte gehen verloren.')){
+      sb.from(TABLE).delete().eq("id", p.id).then(function(r){
+        if(r.error){ toast("Löschen fehlgeschlagen.", true); return; }
+        data = data.filter(function(x){return x.id!==p.id;});
+        closePanel();
+      });
+    }
+  });
+
+  /* ── To-dos ── */
+  function renderTodos(){
+    var p = current(); if(!p) return;
+    var el = document.getElementById("todoList");
+    if(!p.data.todos.length){ el.innerHTML = '<div class="empty">Noch keine Aufgaben.</div>'; return; }
+    el.innerHTML = p.data.todos.map(function(t){
+      return '<div class="todo'+(t.done?" done":"")+'" data-id="'+t.id+'">'
+        + '<input type="checkbox"'+(t.done?" checked":"")+' aria-label="Erledigt">'
+        + '<span>'+esc(t.text)+'</span>'
+        + '<button class="del" aria-label="Löschen">×</button>'
+        + '</div>';
+    }).join("");
+    el.querySelectorAll(".todo").forEach(function(row){
+      var id = row.getAttribute("data-id");
+      row.querySelector("input").addEventListener("change", function(){
+        var p = current();
+        p.data.todos.forEach(function(t){ if(t.id===id) t.done = !t.done; });
+        persist(p); renderTodos();
+      });
+      row.querySelector(".del").addEventListener("click", function(){
+        var p = current();
+        p.data.todos = p.data.todos.filter(function(t){return t.id!==id;});
+        persist(p); renderTodos();
+      });
+    });
+  }
+  function addTodo(){
+    var inp = document.getElementById("todoInput");
+    var v = inp.value.trim(); if(!v) return;
+    var p = current(); if(!p) return;
+    p.data.todos.push({id:uid(), text:v, done:false});
+    inp.value = ""; persist(p); renderTodos();
+  }
+  document.getElementById("todoAdd").addEventListener("click", addTodo);
+  document.getElementById("todoInput").addEventListener("keydown", function(e){ if(e.key==="Enter") addTodo(); });
+
+  /* ── Notizen ── */
+  function renderNotes(){
+    var p = current(); if(!p) return;
+    var el = document.getElementById("noteList");
+    if(!p.data.notes.length){ el.innerHTML = '<div class="empty">Noch keine Notizen.</div>'; return; }
+    var sorted = p.data.notes.slice().sort(function(a,b){return b.ts-a.ts;});
+    el.innerHTML = sorted.map(function(n){
+      return '<div class="note" data-id="'+n.id+'">'
+        + '<p>'+esc(n.text)+'</p>'
+        + '<div class="meta"><span>'+fmtDate(n.ts)+'</span><button>löschen</button></div>'
+        + '</div>';
+    }).join("");
+    el.querySelectorAll(".note").forEach(function(row){
+      var id = row.getAttribute("data-id");
+      row.querySelector("button").addEventListener("click", function(){
+        var p = current();
+        p.data.notes = p.data.notes.filter(function(n){return n.id!==id;});
+        persist(p); renderNotes();
+      });
+    });
+  }
+  document.getElementById("noteAdd").addEventListener("click", function(){
+    var ta = document.getElementById("noteInput");
+    var v = ta.value.trim(); if(!v) return;
+    var p = current(); if(!p) return;
+    p.data.notes.push({id:uid(), text:v, ts:now()});
+    ta.value = ""; persist(p); renderNotes();
+  });
+
+  /* ── Drive-Links / Dokumente ── */
+  function labelFromUrl(u){
+    try{
+      var url = new URL(u);
+      if(url.hostname.indexOf("docs.google")>-1){
+        if(u.indexOf("/document/")>-1) return "Google Doc";
+        if(u.indexOf("/spreadsheets/")>-1) return "Google Sheet";
+        if(u.indexOf("/presentation/")>-1) return "Google Präsentation";
+        return "Google Docs";
+      }
+      if(url.hostname.indexOf("drive.google")>-1){
+        if(u.indexOf("/folders/")>-1) return "Drive-Ordner";
+        return "Drive-Datei";
+      }
+      return url.hostname.replace("www.","");
+    }catch(e){ return "Link"; }
+  }
+  function renderDocs(){
+    var p = current(); if(!p) return;
+    var el = document.getElementById("docList");
+    if(!p.data.docs.length){ el.innerHTML = '<div class="empty">Noch keine Dokumente verknüpft. Einfach einen Google-Drive-Link einfügen.</div>'; return; }
+    el.innerHTML = p.data.docs.map(function(d){
+      return '<a class="doc" href="'+esc(d.url)+'" target="_blank" rel="noopener" data-id="'+d.id+'">'
+        + '<div class="ic">📄</div>'
+        + '<div><b>'+esc(d.label)+'</b><small>'+esc(d.url)+'</small></div>'
+        + '<div class="meta"><button aria-label="Entfernen">löschen</button></div>'
+        + '</a>';
+    }).join("");
+    el.querySelectorAll(".doc").forEach(function(row){
+      var id = row.getAttribute("data-id");
+      row.querySelector("button").addEventListener("click", function(e){
+        e.preventDefault(); e.stopPropagation();
+        var p = current();
+        p.data.docs = p.data.docs.filter(function(d){return d.id!==id;});
+        persist(p); renderDocs();
+      });
+    });
+  }
+  function addDoc(){
+    var inp = document.getElementById("docUrl");
+    var v = inp.value.trim(); if(!v) return;
+    if(!/^https?:\/\//i.test(v)){ toast("Bitte einen vollständigen Link einfügen (beginnt mit https://).", true); return; }
+    var p = current(); if(!p) return;
+    p.data.docs.push({id:uid(), url:v, label:labelFromUrl(v)});
+    inp.value = ""; persist(p); renderDocs();
+  }
+  document.getElementById("docAdd").addEventListener("click", addDoc);
+  document.getElementById("docUrl").addEventListener("keydown", function(e){ if(e.key==="Enter") addDoc(); });
+
+  /* ── Transkripte ── */
+  function renderTranscripts(){
+    var p = current(); if(!p) return;
+    var el = document.getElementById("trList");
+    if(!p.data.transcripts.length){ el.innerHTML = '<div class="empty">Noch keine Transkripte gespeichert.</div>'; return; }
+    var sorted = p.data.transcripts.slice().sort(function(a,b){return b.ts-a.ts;});
+    el.innerHTML = sorted.map(function(t){
+      return '<div class="transcript" data-id="'+t.id+'">'
+        + '<div class="transcript-head"><b>'+esc(t.title)+'</b><small>'+fmtDate(t.ts)+'</small><button aria-label="Löschen">löschen</button></div>'
+        + '<div class="transcript-body">'+esc(t.text)+'</div>'
+        + '</div>';
+    }).join("");
+    el.querySelectorAll(".transcript").forEach(function(row){
+      var id = row.getAttribute("data-id");
+      row.querySelector(".transcript-head").addEventListener("click", function(){
+        row.classList.toggle("open");
+      });
+      row.querySelector("button").addEventListener("click", function(e){
+        e.stopPropagation();
+        if(!confirm("Transkript löschen?")) return;
+        var p = current();
+        p.data.transcripts = p.data.transcripts.filter(function(t){return t.id!==id;});
+        persist(p); renderTranscripts();
+      });
+    });
+  }
+  var trForm = document.getElementById("trForm");
+  document.getElementById("trToggle").addEventListener("click", function(){ trForm.classList.add("open"); this.style.display="none"; });
+  function closeTrForm(){
+    trForm.classList.remove("open");
+    document.getElementById("trToggle").style.display="";
+    document.getElementById("trTitle").value="";
+    document.getElementById("trText").value="";
+  }
+  document.getElementById("trCancel").addEventListener("click", closeTrForm);
+  document.getElementById("trSave").addEventListener("click", function(){
+    var title = document.getElementById("trTitle").value.trim();
+    var text = document.getElementById("trText").value.trim();
+    if(!text){ toast("Bitte zuerst den Text einfügen.", true); return; }
+    var p = current(); if(!p) return;
+    p.data.transcripts.push({id:uid(), title:title||("Transkript vom "+fmtDate(now())), text:text, ts:now()});
+    persist(p); closeTrForm(); renderTranscripts();
+  });
+
+  /* ── Neues Projekt ── */
+  function openModal(){
+    modal.classList.add("open");
+    document.getElementById("npName").value="";
+    document.getElementById("npSub").value="";
+    document.getElementById("npStatus").value="aktiv";
+    document.getElementById("npName").focus();
+  }
+  function closeModal(){ modal.classList.remove("open"); }
+  document.getElementById("btnNew").addEventListener("click", openModal);
+  document.getElementById("npCancel").addEventListener("click", closeModal);
+  document.getElementById("modalBackdrop").addEventListener("click", closeModal);
+  document.getElementById("npSave").addEventListener("click", function(){
+    var name = document.getElementById("npName").value.trim();
+    if(!name){ document.getElementById("npName").focus(); return; }
+    var row = {
+      name:name,
+      sub:document.getElementById("npSub").value.trim(),
+      status:document.getElementById("npStatus").value,
+      data:emptyData()
+    };
+    var btn = this; btn.disabled = true;
+    sb.from(TABLE).insert(row).select().then(function(r){
+      btn.disabled = false;
+      if(r.error){ toast("Anlegen fehlgeschlagen: "+r.error.message, true); return; }
+      data.push(r.data[0]); closeModal(); renderGrid(); openPanel(r.data[0].id);
+    });
+  });
+
+  /* ── Start ── */
+  sb.auth.getSession().then(function(r){
+    if(r.data && r.data.session){ show("app"); loadProjects(); }
+    else show("auth");
+  });
+
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("./sw.js").catch(function(){});
+  }
+})();
+</script>
+</body>
+</html>
