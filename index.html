@@ -173,6 +173,14 @@
   .due.urgent{background:var(--pill-wait-bg); color:var(--pill-wait-fg)}
   .legend{display:flex; gap:16px; align-items:center; font-size:12px; color:var(--ink-soft); margin:0 0 24px; flex-wrap:wrap}
   .legend i{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px}
+  .prio-dot{width:14px; height:14px; border-radius:5px; border:0; padding:0; flex:none; cursor:pointer; transition:transform .12s ease}
+  .prio-dot:hover{transform:scale(1.25)}
+  .prio-dot.hoch{background:#ff4732}
+  .prio-dot.mittel{background:var(--sand)}
+  .prio-dot.niedrig{background:var(--moss)}
+  .todo .due{cursor:pointer; flex:none; position:relative}
+  .todo-addterm{position:relative; font-size:11.5px; color:var(--ink-soft); text-decoration:underline; cursor:pointer; white-space:nowrap; flex:none}
+  .todo .due input, .todo-addterm input{position:absolute; left:0; bottom:0; opacity:0; width:1px; height:1px; border:0; padding:0}
   input.datefield{
     border:1.5px solid var(--line); background:var(--card); border-radius:10px;
     padding:6px 10px; font-size:13px; font-weight:600; outline:none; color-scheme:light dark;
@@ -374,12 +382,6 @@
         <option value="cmb">Sonstige CMB-Projekte</option>
         <option value="privat">Private Projekte</option>
       </select>
-      <select class="status" id="pPriority" aria-label="Priorität">
-        <option value="niedrig">Priorität: Niedrig</option>
-        <option value="mittel">Priorität: Mittel</option>
-        <option value="hoch">Priorität: Hoch</option>
-      </select>
-      <input type="date" class="datefield" id="pDue" aria-label="Termin">
       <button class="btn danger small" id="btnDelete">Projekt löschen</button>
     </div>
   </div>
@@ -388,8 +390,14 @@
     <div class="section">
       <h3>To-dos</h3>
       <div id="todoList"></div>
-      <div class="addrow">
+      <div class="addrow" style="flex-wrap:wrap">
         <input type="text" id="todoInput" placeholder="Neue Aufgabe … (Enter)" maxlength="200">
+        <select class="status" id="todoPrio" aria-label="Priorität">
+          <option value="niedrig">Niedrig</option>
+          <option value="mittel" selected>Mittel</option>
+          <option value="hoch">Hoch</option>
+        </select>
+        <input type="date" id="todoDue" class="datefield" aria-label="Termin (optional)">
         <button class="btn small" id="todoAdd">Hinzufügen</button>
       </div>
     </div>
@@ -458,20 +466,6 @@
         <option value="cmb">Sonstige CMB-Projekte</option>
         <option value="privat">Private Projekte</option>
       </select>
-    </div>
-    <div style="display:flex; gap:12px">
-      <div style="flex:1">
-        <label for="npPriority">Priorität</label>
-        <select id="npPriority">
-          <option value="niedrig">Niedrig</option>
-          <option value="mittel" selected>Mittel</option>
-          <option value="hoch">Hoch</option>
-        </select>
-      </div>
-      <div style="flex:1">
-        <label for="npDue">Termin (optional)</label>
-        <input type="date" id="npDue" class="datefield" style="width:100%; padding:11px 14px; border-radius:11px">
-      </div>
     </div>
     <div class="actions">
       <button class="btn ghost" id="npCancel">Abbrechen</button>
@@ -655,7 +649,6 @@
     sb.from(TABLE).update({
       name:p.name, sub:p.sub, status:p.status, data:p.data,
       category:p.category||"cmb", sort_order:p.sort_order||0,
-      priority:p.priority||"mittel", due_date:p.due_date||null,
       updated_at:p.updated_at
     }).eq("id", p.id).then(function(r){
         if(r.error) toast("Speichern fehlgeschlagen – bitte Internetverbindung prüfen.", true);
@@ -669,16 +662,24 @@
     var t = new Date(); t.setHours(0,0,0,0);
     return Math.round((d - t)/86400000);
   }
-  function effectivePriority(p){
-    var base = p.priority || "mittel";
-    if(p.status==="fertig") return base;
-    if(p.due_date){
-      var days = daysUntil(p.due_date);
+  var PRIO_RANK = {hoch:3, mittel:2, niedrig:1};
+  function todoPrio(t){
+    var base = t.prio || "mittel";
+    if(t.done) return base;
+    if(t.due){
+      var days = daysUntil(t.due);
       if(days<=3) return "hoch";
       if(days<=7 && base==="niedrig") return "mittel";
     }
     return base;
   }
+  function relDay(days, kurz){
+    if(days<0) return "überfällig";
+    if(days===0) return "heute";
+    if(days===1) return "morgen";
+    return "in "+days+(kurz?" T.":" Tagen");
+  }
+  function dueClass(days){ return days<=3 ? "urgent" : (days<=7 ? "soon" : "ok"); }
   function fmtShort(s){
     var parts = s.split("-");
     return parts[2]+"."+parts[1]+".";
@@ -691,18 +692,29 @@
   }
   function tileHtml(p){
     var d = p.data || {todos:[],notes:[],docs:[],transcripts:[]};
-    var open = (d.todos||[]).filter(function(t){return !t.done;}).length;
-    var total = (d.todos||[]).length;
-    var pct = total ? Math.round((total-open)/total*100) : 0;
-    var countText = total ? (total-open)+" / "+total+" erledigt" : "keine To-dos";
-    var dueHtml = "";
-    if(p.due_date && p.status!=="fertig"){
-      var days = daysUntil(p.due_date);
-      var dueCls = days<=3 ? "urgent" : (days<=7 ? "soon" : "ok");
-      var rel = days<0 ? "überfällig" : days===0 ? "heute" : days===1 ? "morgen" : "in "+days+" Tagen";
-      dueHtml = '<span class="due '+dueCls+'">'+fmtShort(p.due_date)+' · '+rel+'</span>';
+    var todos = d.todos||[];
+    var openList = todos.filter(function(t){return !t.done;});
+    var total = todos.length;
+    var doneCount = total - openList.length;
+    var pct = total ? Math.round(doneCount/total*100) : 0;
+    var countText = total ? doneCount+" / "+total+" erledigt" : "keine To-dos";
+    /* Kachel erbt Farbe & Termin von der dringendsten offenen Aufgabe */
+    var stripe = "", nearest = null;
+    if(openList.length && p.status!=="fertig"){
+      var top = "niedrig";
+      openList.forEach(function(t){
+        var ep = todoPrio(t);
+        if(PRIO_RANK[ep] > PRIO_RANK[top]) top = ep;
+        if(t.due && (!nearest || t.due < nearest)) nearest = t.due;
+      });
+      stripe = " prio-"+top;
     }
-    return '<button class="tile prio-'+effectivePriority(p)+'" draggable="true" data-id="'+p.id+'">'
+    var dueHtml = "";
+    if(nearest){
+      var days = daysUntil(nearest);
+      dueHtml = '<span class="due '+dueClass(days)+'">'+fmtShort(nearest)+' · '+relDay(days)+'</span>';
+    }
+    return '<button class="tile'+stripe+'" draggable="true" data-id="'+p.id+'">'
       + '<div class="tile-top">'
       +   '<div class="avatar'+(p.status==="fertig"?" calm":"")+'"><b>'+esc(initials(p.name))+'</b></div>'
       +   '<div style="flex:1;min-width:0"><h2>'+esc(p.name)+'</h2><div class="sub">'+esc(p.sub||"")+'</div></div>'
@@ -746,7 +758,7 @@
       + '<span><i style="background:#ff4732"></i>Hoch</span>'
       + '<span><i style="background:#c4a882"></i>Mittel</span>'
       + '<span><i style="background:#4d7a5e"></i>Niedrig</span>'
-      + '<span>· Termin in ≤ 7 Tagen stuft automatisch hoch, ≤ 3 Tagen = Hoch</span>'
+      + '<span>· Farbe = dringendste offene Aufgabe · Termin in ≤ 7 Tagen stuft hoch, ≤ 3 Tagen = Hoch</span>'
       + '</div>';
     CATEGORIES.forEach(function(cat){
       var items = data.filter(function(p){ return (p.category||"cmb")===cat.key; })
@@ -854,8 +866,6 @@
     document.getElementById("pSub").textContent = p.sub||"";
     document.getElementById("pStatus").value = p.status;
     document.getElementById("pCategory").value = p.category||"cmb";
-    document.getElementById("pPriority").value = p.priority||"mittel";
-    document.getElementById("pDue").value = p.due_date||"";
     renderTodos(); renderNotes(); renderDocs(); renderTranscripts();
     overlay.classList.add("open"); panel.classList.add("open");
     document.body.style.overflow = "hidden";
@@ -879,16 +889,6 @@
   document.getElementById("pStatus").addEventListener("change", function(){
     var p = current(); if(!p) return;
     p.status = this.value; persist(p);
-  });
-
-  document.getElementById("pPriority").addEventListener("change", function(){
-    var p = current(); if(!p) return;
-    p.priority = this.value; persist(p);
-  });
-
-  document.getElementById("pDue").addEventListener("change", function(){
-    var p = current(); if(!p) return;
-    p.due_date = this.value || null; persist(p);
   });
 
   document.getElementById("pCategory").addEventListener("change", function(){
@@ -919,19 +919,60 @@
     var p = current(); if(!p) return;
     var el = document.getElementById("todoList");
     if(!p.data.todos.length){ el.innerHTML = '<div class="empty">Noch keine Aufgaben.</div>'; return; }
-    el.innerHTML = p.data.todos.map(function(t){
+    /* Dringendstes zuerst, Erledigtes unten */
+    var sorted = p.data.todos.slice().sort(function(a,b){
+      if((a.done?1:0)!==(b.done?1:0)) return a.done?1:-1;
+      var r = PRIO_RANK[todoPrio(b)] - PRIO_RANK[todoPrio(a)];
+      if(r) return r;
+      var ad = a.due||"9999-99-99", bd = b.due||"9999-99-99";
+      return ad<bd?-1:ad>bd?1:0;
+    });
+    el.innerHTML = sorted.map(function(t){
+      var ep = todoPrio(t);
+      var dueHtml;
+      if(t.due){
+        var days = daysUntil(t.due);
+        dueHtml = '<label class="due '+dueClass(days)+'" title="Termin ändern">'
+          + fmtShort(t.due)+' · '+relDay(days, true)
+          + '<input type="date" value="'+t.due+'"></label>';
+      }else{
+        dueHtml = '<label class="todo-addterm" title="Termin setzen">Termin<input type="date"></label>';
+      }
       return '<div class="todo'+(t.done?" done":"")+'" data-id="'+t.id+'">'
         + '<input type="checkbox"'+(t.done?" checked":"")+' aria-label="Erledigt">'
+        + '<button class="prio-dot '+ep+'" title="Priorität: '+ep.charAt(0).toUpperCase()+ep.slice(1)+' – klicken zum Ändern"></button>'
         + '<span>'+esc(t.text)+'</span>'
+        + dueHtml
         + '<button class="del" aria-label="Löschen">×</button>'
         + '</div>';
     }).join("");
     el.querySelectorAll(".todo").forEach(function(row){
       var id = row.getAttribute("data-id");
-      row.querySelector("input").addEventListener("change", function(){
-        var p = current();
-        p.data.todos.forEach(function(t){ if(t.id===id) t.done = !t.done; });
-        persist(p); renderTodos();
+      function findTodo(){
+        var p = current(); if(!p) return {};
+        return {p:p, t:p.data.todos.filter(function(t){return t.id===id;})[0]};
+      }
+      row.querySelector('input[type="checkbox"]').addEventListener("change", function(){
+        var f = findTodo(); if(!f.t) return;
+        f.t.done = !f.t.done;
+        persist(f.p); renderTodos();
+      });
+      row.querySelector(".prio-dot").addEventListener("click", function(){
+        var f = findTodo(); if(!f.t) return;
+        var order = ["niedrig","mittel","hoch"];
+        f.t.prio = order[(order.indexOf(f.t.prio||"mittel")+1)%3];
+        persist(f.p); renderTodos();
+      });
+      var dateInput = row.querySelector('input[type="date"]');
+      dateInput.parentNode.addEventListener("click", function(e){
+        if(e.target===dateInput) return;
+        e.preventDefault();
+        try{ dateInput.showPicker(); }catch(err){ dateInput.focus(); }
+      });
+      dateInput.addEventListener("change", function(){
+        var f = findTodo(); if(!f.t) return;
+        f.t.due = this.value || null;
+        persist(f.p); renderTodos();
       });
       row.querySelector(".del").addEventListener("click", function(){
         var p = current();
@@ -944,8 +985,15 @@
     var inp = document.getElementById("todoInput");
     var v = inp.value.trim(); if(!v) return;
     var p = current(); if(!p) return;
-    p.data.todos.push({id:uid(), text:v, done:false});
-    inp.value = ""; persist(p); renderTodos();
+    p.data.todos.push({
+      id:uid(), text:v, done:false,
+      prio:document.getElementById("todoPrio").value,
+      due:document.getElementById("todoDue").value || null
+    });
+    inp.value = "";
+    document.getElementById("todoPrio").value = "mittel";
+    document.getElementById("todoDue").value = "";
+    persist(p); renderTodos();
   }
   document.getElementById("todoAdd").addEventListener("click", addTodo);
   document.getElementById("todoInput").addEventListener("keydown", function(e){ if(e.key==="Enter") addTodo(); });
@@ -1078,8 +1126,6 @@
     document.getElementById("npName").value="";
     document.getElementById("npSub").value="";
     document.getElementById("npStatus").value="aktiv";
-    document.getElementById("npPriority").value="mittel";
-    document.getElementById("npDue").value="";
     document.getElementById("npName").focus();
   }
   function closeModal(){ modal.classList.remove("open"); }
@@ -1098,8 +1144,6 @@
       status:document.getElementById("npStatus").value,
       category:cat,
       sort_order:maxOrder+1,
-      priority:document.getElementById("npPriority").value,
-      due_date:document.getElementById("npDue").value || null,
       data:emptyData()
     };
     var btn = this; btn.disabled = true;
