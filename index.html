@@ -73,9 +73,36 @@
   .tagline{font-family:var(--font-display); font-style:italic; color:var(--ink-soft); font-size:17px; margin:0 0 28px}
 
   .topbar{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:20px}
-  .stats{display:flex; gap:26px}
+  .stats{display:flex; gap:26px; flex-wrap:wrap}
   .stat b{display:block; font-family:var(--font-display); font-size:28px; font-weight:400; line-height:1; font-variant-numeric:tabular-nums}
   .stat span{font-size:12px; color:var(--ink-soft)}
+  .stat-money{position:relative; padding-right:30px}
+  .stat-money b.zero{color:var(--pill-wait-fg)}
+  .stat-money small{display:block; font-size:11px; color:var(--ink-soft)}
+  .money-add{
+    position:absolute; right:0; top:2px; width:24px; height:24px; border:0; border-radius:8px;
+    background:var(--grad); color:#fff; font-size:16px; line-height:1; cursor:pointer; padding:0;
+  }
+  .money-menu{
+    position:absolute; top:calc(100% + 6px); left:0; z-index:30; background:var(--card);
+    border-radius:12px; box-shadow:var(--shadow-lift); padding:6px; display:flex;
+    flex-direction:column; min-width:190px;
+  }
+  .money-menu[hidden]{display:none}
+  .money-menu button{border:0; background:none; text-align:left; padding:8px 10px; border-radius:8px; font-size:13px; cursor:pointer; color:var(--ink)}
+  .money-menu button:hover{background:var(--card-soft)}
+  .money-menu button.undo{color:var(--ink-soft); font-size:12px; border-top:1px solid var(--line); border-radius:0; margin-top:4px}
+  .wip-warn{
+    background:var(--pill-wait-bg); color:var(--pill-wait-fg); padding:12px 16px;
+    border-radius:14px; font-size:13.5px; font-weight:600; margin-bottom:18px;
+  }
+  .cat-warte .cat-head{cursor:pointer; color:var(--ink-soft); font-size:20px}
+  .cat-warte .cat-head:hover{color:var(--ink)}
+  .cat-warte .chev{font-size:12px; color:var(--ink-soft); transition:transform .2s ease}
+  .cat-warte.open .chev{transform:rotate(180deg)}
+  .warte-grid.collapsed .tile{display:none}
+  .warte-grid .tile{opacity:.6; filter:saturate(.5)}
+  .warte-grid .tile:hover{opacity:1; filter:none}
 
   .btn{
     border:0; border-radius:12px; padding:11px 20px; font-weight:600; font-size:14px;
@@ -411,6 +438,18 @@
       <div class="stat"><b id="statProjects">0</b><span>Projekte</span></div>
       <div class="stat"><b id="statOpen">0</b><span>offene To-dos</span></div>
       <div class="stat"><b id="statActive">0</b><span>aktiv</span></div>
+      <div class="stat stat-money">
+        <b id="statMoney" class="zero">0</b>
+        <span>Geld-Aktionen Woche<small id="statMoneyPrev"></small></span>
+        <button class="money-add" id="moneyAdd" aria-label="Geld-Aktion erfassen">+</button>
+        <div class="money-menu" id="moneyMenu" hidden>
+          <button data-t="angebot">Angebot gesendet</button>
+          <button data-t="nachfass">Nachgefasst</button>
+          <button data-t="rechnung">Rechnung gestellt</button>
+          <button data-t="livegang">Livegang</button>
+          <button data-t="undo" class="undo">letzte rückgängig machen</button>
+        </div>
+      </div>
     </div>
     <button class="btn" id="btnNew">+ Neues Projekt</button>
   </div>
@@ -494,6 +533,7 @@
         <option value="sprint">Sprintprojekte</option>
         <option value="cmb">Sonstige CMB-Projekte</option>
         <option value="privat">Private Projekte</option>
+        <option value="warte">Warteschleife</option>
       </select>
       <button class="btn danger small" id="btnDelete">Projekt löschen</button>
     </div>
@@ -594,6 +634,7 @@
         <option value="sprint">Sprintprojekte</option>
         <option value="cmb">Sonstige CMB-Projekte</option>
         <option value="privat">Private Projekte</option>
+        <option value="warte">Warteschleife</option>
       </select>
     </div>
     <div class="actions">
@@ -762,8 +803,15 @@
   var CATEGORIES = [
     {key:"sprint", label:"Sprintprojekte"},
     {key:"cmb",    label:"Sonstige CMB-Projekte"},
-    {key:"privat", label:"Private Projekte"}
+    {key:"privat", label:"Private Projekte"},
+    {key:"warte",  label:"Warteschleife"}
   ];
+  var WIP_LIMIT = 3;
+  function activeCount(){
+    return data.filter(function(p){ return (p.category||"cmb")!=="warte"; }).length;
+  }
+  var warteOpen = false;
+  try{ warteOpen = localStorage.getItem("cockpit-warte-open")==="1"; }catch(e){}
 
   function current(){
     for(var i=0;i<data.length;i++){ if(data[i].id===currentId) return data[i]; }
@@ -920,6 +968,57 @@
   function dateKey(d){
     return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
   }
+  /* ── Geld-Aktionen (Wochenzähler) ── */
+  function isoWeekKey(d){
+    var dt = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    var tag = (dt.getDay()+6)%7;
+    dt.setDate(dt.getDate() - tag + 3);
+    var ersterDo = new Date(dt.getFullYear(), 0, 4);
+    var fTag = (ersterDo.getDay()+6)%7;
+    ersterDo.setDate(ersterDo.getDate() - fTag + 3);
+    return dt.getFullYear() + "-W" + (1 + Math.round((dt - ersterDo)/604800000));
+  }
+  function renderMoney(){
+    if(!extras) return;
+    var log = extras.money_log || [];
+    var jetzt = new Date();
+    var wk = isoWeekKey(jetzt);
+    var vor = new Date(jetzt); vor.setDate(jetzt.getDate()-7);
+    var lw = isoWeekKey(vor);
+    var n = log.filter(function(e){return e.w===wk;}).length;
+    var nVor = log.filter(function(e){return e.w===lw;}).length;
+    var el = document.getElementById("statMoney");
+    el.textContent = n;
+    el.classList.toggle("zero", n===0);
+    document.getElementById("statMoneyPrev").textContent = "Vorwoche: "+nVor;
+  }
+  var moneyMenu = document.getElementById("moneyMenu");
+  document.getElementById("moneyAdd").addEventListener("click", function(e){
+    e.stopPropagation();
+    moneyMenu.hidden = !moneyMenu.hidden;
+  });
+  document.addEventListener("click", function(){ moneyMenu.hidden = true; });
+  moneyMenu.addEventListener("click", function(e){
+    e.stopPropagation();
+    var btn = e.target.closest("button"); if(!btn || !extras) return;
+    var t = btn.getAttribute("data-t");
+    extras.money_log = extras.money_log || [];
+    var wk = isoWeekKey(new Date());
+    if(t==="undo"){
+      for(var i=extras.money_log.length-1; i>=0; i--){
+        if(extras.money_log[i].w===wk){ extras.money_log.splice(i,1); toast("Letzte Geld-Aktion entfernt."); break; }
+      }
+    }else{
+      extras.money_log.push({d:dateKey(new Date()), w:wk, t:t});
+      var namen = {angebot:"Angebot gesendet", nachfass:"Nachgefasst", rechnung:"Rechnung gestellt", livegang:"Livegang"};
+      toast(namen[t]+" – zählt! 💪");
+      /* Einträge älter als ~6 Monate aufräumen */
+      if(extras.money_log.length > 500) extras.money_log = extras.money_log.slice(-400);
+    }
+    moneyMenu.hidden = true;
+    persistExtras(); renderMoney();
+  });
+
   function streakOf(rt){
     var n = 0, d = new Date(), done = rt.done||{};
     if(!done[dateKey(d)]) d.setDate(d.getDate()-1);
@@ -946,13 +1045,15 @@
     extras.updated_at = new Date().toISOString();
     sb.from(EXTRAS_TABLE).update({
       routines:extras.routines, goals:extras.goals,
-      routine_imgs:extras.routine_imgs||[], updated_at:extras.updated_at
+      routine_imgs:extras.routine_imgs||[], money_log:extras.money_log||[],
+      updated_at:extras.updated_at
     }).eq("id", extras.id).then(function(r){
         if(r.error) toast("Speichern fehlgeschlagen – bitte Internetverbindung prüfen.", true);
       });
   }
   function renderDaily(){
     if(!extras) return;
+    renderMoney();
     document.getElementById("daily").hidden = false;
     var today = dateKey(new Date());
     document.getElementById("dailyDate").textContent =
@@ -1245,17 +1346,38 @@
       + '<span><i style="background:#4d7a5e"></i>Niedrig</span>'
       + '<span>· Farbe = dringendste offene Aufgabe · Termin in ≤ 7 Tagen stuft hoch, ≤ 3 Tagen = Hoch</span>'
       + '</div>';
+    var act = activeCount();
+    if(act > WIP_LIMIT){
+      html = '<div class="wip-warn">' + act + ' Projekte aktiv – dein Limit ist ' + WIP_LIMIT
+        + '. Zieh Projekte in die Warteschleife (ganz unten), bis nur noch ' + WIP_LIMIT + ' „vor der Nase“ sind.</div>' + html;
+    }
     CATEGORIES.forEach(function(cat){
       var items = data.filter(function(p){ return (p.category||"cmb")===cat.key; })
         .sort(function(a,b){ return (a.sort_order||0)-(b.sort_order||0); });
-      html += '<section class="cat">'
-        + '<h2 class="cat-head">'+cat.label+'<span class="cat-count">'+items.length+'</span></h2>'
-        + '<div class="grid" data-cat="'+cat.key+'">'
-        + items.map(tileHtml).join("")
-        + '<div class="drop-hint">Noch leer – Kacheln hierher ziehen</div>'
-        + '</div></section>';
+      if(cat.key==="warte"){
+        html += '<section class="cat cat-warte'+(warteOpen?" open":"")+'">'
+          + '<h2 class="cat-head" id="warteHead">Warteschleife<span class="cat-count">'+items.length+'</span><span class="chev">▾</span></h2>'
+          + '<div class="grid warte-grid'+(warteOpen?"":" collapsed")+'" data-cat="warte">'
+          + items.map(tileHtml).join("")
+          + '<div class="drop-hint">Hierher ziehen, was warten darf – zum Anzeigen auf „Warteschleife“ klicken</div>'
+          + '</div></section>';
+      }else{
+        html += '<section class="cat">'
+          + '<h2 class="cat-head">'+cat.label+'<span class="cat-count">'+items.length+'</span></h2>'
+          + '<div class="grid" data-cat="'+cat.key+'">'
+          + items.map(tileHtml).join("")
+          + '<div class="drop-hint">Noch leer – Kacheln hierher ziehen</div>'
+          + '</div></section>';
+      }
     });
     sections.innerHTML = html;
+
+    var wh = document.getElementById("warteHead");
+    if(wh) wh.addEventListener("click", function(){
+      warteOpen = !warteOpen;
+      try{ localStorage.setItem("cockpit-warte-open", warteOpen ? "1" : "0"); }catch(e){}
+      renderGrid();
+    });
 
     sections.querySelectorAll(".tile[data-id]").forEach(function(el){
       el.addEventListener("click", function(){ openPanel(el.getAttribute("data-id")); });
@@ -1298,18 +1420,37 @@
   }
 
   function syncOrderFromDom(){
-    var changed = [];
+    /* Erst neue Zuordnung einsammeln, dann WIP-Limit prüfen, dann anwenden */
+    var neu = {};
     sections.querySelectorAll(".grid").forEach(function(g){
       var cat = g.getAttribute("data-cat");
       g.querySelectorAll(".tile[data-id]").forEach(function(t, i){
-        var p = byId(t.getAttribute("data-id"));
-        if(p && ((p.category||"cmb")!==cat || p.sort_order!==i)){
-          p.category = cat; p.sort_order = i;
-          changed.push(p);
-        }
+        neu[t.getAttribute("data-id")] = {cat:cat, order:i};
       });
     });
-    if(!changed.length) return;
+    var futureActive = data.filter(function(p){
+      var n = neu[p.id];
+      return (n ? n.cat : (p.category||"cmb")) !== "warte";
+    }).length;
+    var blockiert = false;
+    data.forEach(function(p){
+      var n = neu[p.id];
+      if(n && (p.category||"cmb")==="warte" && n.cat!=="warte" && futureActive > WIP_LIMIT){
+        delete neu[p.id]; blockiert = true; futureActive--;
+      }
+    });
+    if(blockiert){
+      toast("Limit "+WIP_LIMIT+" erreicht – erst ein aktives Projekt in die Warteschleife schieben.", true);
+    }
+    var changed = [];
+    data.forEach(function(p){
+      var n = neu[p.id];
+      if(n && ((p.category||"cmb")!==n.cat || p.sort_order!==n.order)){
+        p.category = n.cat; p.sort_order = n.order;
+        changed.push(p);
+      }
+    });
+    if(!changed.length){ if(blockiert) renderGrid(); return; }
     changed.forEach(function(p){
       sb.from(TABLE).update({category:p.category, sort_order:p.sort_order, updated_at:new Date().toISOString()})
         .eq("id", p.id).then(function(r){
@@ -1379,6 +1520,11 @@
   document.getElementById("pCategory").addEventListener("change", function(){
     var p = current(); if(!p) return;
     var cat = this.value;
+    if(cat!=="warte" && (p.category||"cmb")==="warte" && activeCount() >= WIP_LIMIT){
+      toast("Limit "+WIP_LIMIT+" erreicht – erst ein aktives Projekt in die Warteschleife schieben.", true);
+      this.value = "warte";
+      return;
+    }
     var maxOrder = -1;
     data.forEach(function(x){ if((x.category||"cmb")===cat && x.sort_order>maxOrder) maxOrder = x.sort_order; });
     p.category = cat; p.sort_order = maxOrder+1;
@@ -1664,6 +1810,10 @@
     var name = document.getElementById("npName").value.trim();
     if(!name){ document.getElementById("npName").focus(); return; }
     var cat = document.getElementById("npCategory").value;
+    if(cat!=="warte" && activeCount() >= WIP_LIMIT){
+      toast("Limit "+WIP_LIMIT+" aktiv – lege das Projekt in der Warteschleife an oder schaffe erst Platz.", true);
+      return;
+    }
     var maxOrder = -1;
     data.forEach(function(x){ if((x.category||"cmb")===cat && x.sort_order>maxOrder) maxOrder = x.sort_order; });
     var row = {

@@ -54,7 +54,8 @@ create table if not exists public.cockpit_extras (
 );
 
 alter table public.cockpit_extras
-  add column if not exists routine_imgs jsonb not null default '[]'::jsonb;
+  add column if not exists routine_imgs jsonb not null default '[]'::jsonb,
+  add column if not exists money_log jsonb not null default '[]'::jsonb;
 
 alter table public.cockpit_extras enable row level security;
 

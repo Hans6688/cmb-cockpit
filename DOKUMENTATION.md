@@ -118,7 +118,21 @@ Kompakte Buttons mit Stand-Anzeige, die Karten erst auf Klick ausklappen
   „N neu“.
 
 ### 4.3 Projektbereiche mit Kacheln
-Drei Bereiche: **Sprintprojekte**, **Sonstige CMB-Projekte**, **Private Projekte**.
+Drei aktive Bereiche – **Sprintprojekte**, **Sonstige CMB-Projekte**, **Private
+Projekte** – plus die **Warteschleife** ganz unten: ein bewusst ausgegrauter,
+standardmäßig eingeklappter Parkplatz für alles, was gerade nicht dran ist
+(Klick auf die Überschrift klappt ihn auf).
+
+**WIP-Limit:** Maximal **3 Projekte** dürfen gleichzeitig in den aktiven
+Bereichen liegen. Ein viertes lässt die App nicht zu (per Drag-and-drop,
+Bereichs-Auswahl oder Neuanlage) – erst muss ein Projekt in die Warteschleife.
+Liegt der Bestand über dem Limit, mahnt ein Hinweis-Banner über den Bereichen.
+
+**Geld-Aktionen-Zähler:** Vierte Kennzahl im Kopfbereich („Geld-Aktionen
+Woche“). Über den +-Knopf werden umsatzwirksame Handlungen erfasst – *Angebot
+gesendet, Nachgefasst, Rechnung gestellt, Livegang* (plus Rückgängig-Funktion).
+Gezählt wird pro Kalenderwoche (`money_log` in `cockpit_extras`), die Vorwoche
+bleibt zum Vergleich sichtbar; bei 0 färbt sich die Zahl warnend orange.
 
 - **Drag-and-drop:** Kacheln lassen sich mit der Maus innerhalb eines Bereichs
   umsortieren und zwischen Bereichen verschieben; die Reihenfolge wird gespeichert.
@@ -268,3 +282,4 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 25.08.2026 | Abschnitt **„KI & Repository“** in der Detailansicht: Repository- und Claude-Chat-Link pro Projekt speicherbar; Knopf „Mit Claude besprechen“ startet einen neuen Claude-Chat mit automatisch übergebenem Projektkontext. |
 | 25.08.2026 | **Vision-Board**: Bilder pro Ziel (Mosaik + Vollbild-Ansicht mit Leitsatz) und Visionsbild für die Tagesroutine; privater Storage-Bucket `cockpit-vision` mit nutzerbezogenen Zugriffsregeln. |
 | 25.08.2026 | Tagesroutine: **Visionsbild-Rotation** – mehrere Bilder (`routine_imgs`), täglich wechselndes Kopfbild; Verwaltung über „Bild hinzufügen“ / „heutiges Bild entfernen“. |
+| 25.08.2026 | **Fokus-Werkzeuge**: Wochenzähler „Geld-Aktionen“ (Angebot/Nachfassen/Rechnung/Livegang, `money_log`) und **WIP-Limit 3** mit neuem Bereich „Warteschleife“ (eingeklappt, ausgegraut); Limit wird bei Drag-and-drop, Bereichswechsel und Neuanlage durchgesetzt. |
