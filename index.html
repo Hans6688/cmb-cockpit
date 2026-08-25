@@ -135,6 +135,16 @@
   .pill.wartet{background:var(--pill-wait-bg); color:var(--pill-wait-fg)}
   .pill.abstimmung{background:var(--pill-review-bg); color:var(--pill-review-fg)}
   .pill.fertig{background:var(--pill-done-bg); color:var(--pill-done-fg)}
+  .tile-todos{display:flex; flex-direction:column; gap:7px; margin-top:-4px}
+  .tt{display:flex; align-items:center; gap:8px; font-size:12.5px; min-width:0}
+  .tt i{width:8px; height:8px; border-radius:2.5px; flex:none}
+  .tt i.hoch{background:#ff4732}
+  .tt i.mittel{background:var(--sand)}
+  .tt i.niedrig{background:var(--moss)}
+  .tt span{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink)}
+  .tt small{color:var(--ink-soft); white-space:nowrap; font-size:11.5px; font-variant-numeric:tabular-nums}
+  .tt small.urgent{color:var(--pill-wait-fg); font-weight:600}
+  .tt-more{font-size:11.5px; color:var(--ink-soft); font-style:italic; padding-left:16px}
   .tile-meta{display:flex; align-items:center; justify-content:space-between; gap:10px; border-top:1px solid var(--line); padding-top:13px; font-size:13px; color:var(--ink-soft)}
   .bar{flex:1; height:5px; border-radius:99px; background:var(--line); overflow:hidden; max-width:120px}
   .bar i{display:block; height:100%; border-radius:99px; background:var(--moss); transition:width .3s ease}
@@ -748,6 +758,13 @@
     return "in "+days+(kurz?" T.":" Tagen");
   }
   function dueClass(days){ return days<=3 ? "urgent" : (days<=7 ? "soon" : "ok"); }
+  function compareTodos(a,b){
+    if((a.done?1:0)!==(b.done?1:0)) return a.done?1:-1;
+    var r = PRIO_RANK[todoPrio(b)] - PRIO_RANK[todoPrio(a)];
+    if(r) return r;
+    var ad = a.due||"9999-99-99", bd = b.due||"9999-99-99";
+    return ad<bd?-1:ad>bd?1:0;
+  }
 
   /* ── Tagesroutine & Ziele ── */
   var EXTRAS_TABLE = "cockpit_extras";
@@ -912,12 +929,29 @@
       var days = daysUntil(nearest);
       dueHtml = '<span class="due '+dueClass(days)+'">'+fmtShort(nearest)+' · '+relDay(days)+'</span>';
     }
+    /* Teaser: die drei dringendsten offenen Aufgaben direkt auf der Kachel */
+    var teaser = "";
+    if(openList.length){
+      var sortedOpen = openList.slice().sort(compareTodos);
+      teaser = '<div class="tile-todos">'
+        + sortedOpen.slice(0,3).map(function(t){
+            var rel = "";
+            if(t.due){
+              var dd = daysUntil(t.due);
+              rel = '<small class="'+(dd<=3?"urgent":"")+'">'+relDay(dd, true)+'</small>';
+            }
+            return '<div class="tt"><i class="'+todoPrio(t)+'"></i><span>'+esc(t.text)+'</span>'+rel+'</div>';
+          }).join("")
+        + (sortedOpen.length>3 ? '<div class="tt-more">+ '+(sortedOpen.length-3)+' weitere</div>' : '')
+        + '</div>';
+    }
     return '<button class="tile'+stripe+'" draggable="true" data-id="'+p.id+'">'
       + '<div class="tile-top">'
       +   '<div class="avatar'+(p.status==="fertig"?" calm":"")+'"><b>'+esc(initials(p.name))+'</b></div>'
       +   '<div style="flex:1;min-width:0"><h2>'+esc(p.name)+'</h2><div class="sub">'+esc(p.sub||"")+'</div></div>'
       +   '<span class="pill '+esc(p.status)+'">'+(STATUS_LABEL[p.status]||p.status)+'</span>'
       + '</div>'
+      + teaser
       + '<div class="tile-meta">'
       +   dueHtml
       +   '<div class="bar"><i style="width:'+pct+'%"></i></div>'
@@ -1118,13 +1152,7 @@
     var el = document.getElementById("todoList");
     if(!p.data.todos.length){ el.innerHTML = '<div class="empty">Noch keine Aufgaben.</div>'; return; }
     /* Dringendstes zuerst, Erledigtes unten */
-    var sorted = p.data.todos.slice().sort(function(a,b){
-      if((a.done?1:0)!==(b.done?1:0)) return a.done?1:-1;
-      var r = PRIO_RANK[todoPrio(b)] - PRIO_RANK[todoPrio(a)];
-      if(r) return r;
-      var ad = a.due||"9999-99-99", bd = b.due||"9999-99-99";
-      return ad<bd?-1:ad>bd?1:0;
-    });
+    var sorted = p.data.todos.slice().sort(compareTodos);
     el.innerHTML = sorted.map(function(t){
       var ep = todoPrio(t);
       var dueHtml;
