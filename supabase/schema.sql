@@ -9,6 +9,8 @@ create table if not exists public.cockpit_projects (
   name        text not null,
   sub         text not null default '',
   status      text not null default 'aktiv',
+  category    text not null default 'cmb',
+  sort_order  integer not null default 0,
   data        jsonb not null default '{"todos":[],"notes":[],"docs":[],"transcripts":[]}'::jsonb,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
@@ -31,3 +33,8 @@ create policy "cockpit_update_own" on public.cockpit_projects
 drop policy if exists "cockpit_delete_own" on public.cockpit_projects;
 create policy "cockpit_delete_own" on public.cockpit_projects
   for delete using (auth.uid() = user_id);
+
+-- Nachrüstung für bestehende Installationen (harmlos, wenn schon vorhanden):
+alter table public.cockpit_projects
+  add column if not exists category text not null default 'cmb',
+  add column if not exists sort_order integer not null default 0;
