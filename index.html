@@ -199,6 +199,27 @@
   .rrow .del:hover{opacity:1; color:var(--pill-wait-fg)}
   .inbox-row{flex-wrap:wrap}
   .inbox-row .assign{max-width:190px}
+
+  /* ── Vision-Board ── */
+  .imgbtn{border:0; background:none; color:var(--ink-soft); font-size:12px; text-decoration:underline; cursor:pointer; padding:2px 4px; white-space:nowrap}
+  .imgbtn:hover{color:var(--ink)}
+  .routine-banner{width:100%; height:110px; object-fit:cover; border-radius:14px; margin-bottom:12px; display:block; cursor:zoom-in}
+  .vision-board{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-bottom:14px}
+  .vb-tile{position:relative; border:0; padding:0; border-radius:14px; overflow:hidden; aspect-ratio:4/3; cursor:zoom-in; background:var(--line)}
+  .vb-tile img{width:100%; height:100%; object-fit:cover; display:block; transition:transform .35s ease}
+  .vb-tile:hover img{transform:scale(1.06)}
+  .vb-tile span{
+    position:absolute; left:0; right:0; bottom:0; padding:22px 10px 8px; color:#fff; text-align:left;
+    font-family:var(--font-display); font-style:italic; font-size:14px; line-height:1.25;
+    background:linear-gradient(transparent, rgba(20,38,48,.78));
+  }
+  .lightbox{position:fixed; inset:0; z-index:90; background:rgba(15,30,40,.93); display:none; place-items:center; padding:24px; cursor:zoom-out}
+  .lightbox.open{display:grid}
+  .lightbox img{max-width:92vw; max-height:78vh; border-radius:18px; box-shadow:0 30px 80px rgba(0,0,0,.5)}
+  .lightbox .lb-text{
+    position:fixed; bottom:30px; left:0; right:0; text-align:center; color:#f0eee6; padding:0 20px;
+    font-family:var(--font-display); font-style:italic; font-size:clamp(18px,3vw,26px); text-wrap:balance;
+  }
   .streak{font-size:11.5px; font-weight:600; background:var(--pill-review-bg); color:var(--pill-review-fg); padding:3px 9px; border-radius:99px; white-space:nowrap}
   .grid:has(.tile) .drop-hint{display:none}
   .dnd-tip{font-size:12.5px; color:var(--ink-soft); margin:-8px 0 10px}
@@ -416,15 +437,21 @@
       <div class="daily-card" id="cardRoutine" hidden>
         <h3>Tagesroutine <small id="dailyDate"></small></h3>
         <p class="daily-sub">Setzt sich jeden Tag automatisch zurück · „Serie“ = Tage in Folge geschafft</p>
+        <img class="routine-banner" id="routineBanner" hidden alt="Visionsbild">
         <div id="routineList"></div>
         <div class="addrow">
           <input type="text" id="routineInput" placeholder="Neue Routine … (Enter)" maxlength="120">
           <button class="btn small" id="routineAdd">Hinzufügen</button>
         </div>
+        <div style="margin-top:10px">
+          <button class="imgbtn" id="routineImgBtn">Visionsbild wählen</button>
+          <button class="imgbtn" id="routineImgDel" hidden>Bild entfernen</button>
+        </div>
       </div>
       <div class="daily-card" id="cardGoals" hidden>
         <h3>Meine Ziele</h3>
-        <p class="daily-sub">Zur Orientierung – abhaken, wenn erreicht</p>
+        <p class="daily-sub">Zur Orientierung – abhaken, wenn erreicht · „Bild“ macht ein Ziel zum Vision-Board-Motiv</p>
+        <div class="vision-board" id="visionBoard" hidden></div>
         <div id="goalList"></div>
         <div class="addrow">
           <input type="text" id="goalInput" placeholder="Neues Ziel … (Enter)" maxlength="200">
@@ -591,6 +618,12 @@
   </div>
 </div>
 
+<div class="lightbox" id="lightbox">
+  <img id="lbImg" alt="Visionsbild">
+  <div class="lb-text" id="lbText"></div>
+</div>
+<input type="file" id="visionFile" accept="image/*" hidden>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -717,8 +750,8 @@
 
   sb.auth.onAuthStateChange(function(event, session){
     if(event === "PASSWORD_RECOVERY"){ pwModal.classList.add("open"); return; }
-    if(session){ show("app"); loadProjects(); loadExtras(); loadInbox(); }
-    else{ show("auth"); }
+    if(session){ uid_ = session.user.id; show("app"); loadProjects(); loadExtras(); loadInbox(); }
+    else{ uid_ = null; show("auth"); }
   });
 
   /* ── Daten ── */
@@ -793,6 +826,86 @@
     var ad = a.due||"9999-99-99", bd = b.due||"9999-99-99";
     return ad<bd?-1:ad>bd?1:0;
   }
+
+  /* ── Vision-Board: privater Bilderspeicher ── */
+  var VISION_BUCKET = "cockpit-vision";
+  var uid_ = null;
+  var visionUrlCache = {};
+  function visionUrl(path, cb){
+    if(visionUrlCache[path]){ cb(visionUrlCache[path]); return; }
+    sb.storage.from(VISION_BUCKET).createSignedUrl(path, 3600).then(function(r){
+      if(r.error || !r.data){ cb(null); return; }
+      visionUrlCache[path] = r.data.signedUrl;
+      cb(r.data.signedUrl);
+    });
+  }
+  function uploadVision(file, path, cb){
+    var img = new Image();
+    var objUrl = URL.createObjectURL(file);
+    img.onload = function(){
+      var max = 1600, s = Math.min(1, max/Math.max(img.width, img.height));
+      var c = document.createElement("canvas");
+      c.width = Math.round(img.width*s); c.height = Math.round(img.height*s);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob(function(blob){
+        sb.storage.from(VISION_BUCKET).upload(path, blob, {upsert:true, contentType:"image/jpeg"}).then(function(r){
+          URL.revokeObjectURL(objUrl);
+          if(r.error){ toast("Bild-Upload fehlgeschlagen: "+r.error.message, true); cb(false); }
+          else { delete visionUrlCache[path]; cb(true); }
+        });
+      }, "image/jpeg", 0.85);
+    };
+    img.onerror = function(){ URL.revokeObjectURL(objUrl); toast("Bild konnte nicht gelesen werden.", true); cb(false); };
+    img.src = objUrl;
+  }
+  function removeVision(path){
+    if(path) sb.storage.from(VISION_BUCKET).remove([path]);
+  }
+  var visionTarget = null; // {type:"routine"} | {type:"goal", id:...}
+  document.getElementById("visionFile").addEventListener("change", function(){
+    var f = this.files[0]; this.value = "";
+    if(!f || !visionTarget || !uid_ || !extras) return;
+    var path = visionTarget.type==="routine"
+      ? uid_+"/routine-banner.jpg"
+      : uid_+"/ziel-"+visionTarget.id+".jpg";
+    var target = visionTarget;
+    toast("Bild wird hochgeladen …");
+    uploadVision(f, path, function(ok){
+      if(!ok) return;
+      if(target.type==="routine"){ extras.routine_img = path; }
+      else {
+        var g = extras.goals.filter(function(x){return x.id===target.id;})[0];
+        if(g) g.img = path;
+      }
+      persistExtras(); renderDaily();
+      toast("Bild gespeichert.");
+    });
+  });
+  document.getElementById("routineImgBtn").addEventListener("click", function(){
+    visionTarget = {type:"routine"};
+    document.getElementById("visionFile").click();
+  });
+  document.getElementById("routineImgDel").addEventListener("click", function(){
+    if(!extras || !extras.routine_img) return;
+    removeVision(extras.routine_img);
+    extras.routine_img = null;
+    persistExtras(); renderDaily();
+  });
+  function openLightbox(path, text){
+    visionUrl(path, function(u){
+      if(!u) return;
+      document.getElementById("lbImg").src = u;
+      document.getElementById("lbText").textContent = text || "";
+      document.getElementById("lightbox").classList.add("open");
+    });
+  }
+  document.getElementById("lightbox").addEventListener("click", function(){
+    this.classList.remove("open");
+    document.getElementById("lbImg").removeAttribute("src");
+  });
+  document.getElementById("routineBanner").addEventListener("click", function(){
+    if(extras && extras.routine_img) openLightbox(extras.routine_img, "");
+  });
 
   /* ── Tagesroutine & Ziele ── */
   var EXTRAS_TABLE = "cockpit_extras";
@@ -880,6 +993,7 @@
       return '<div class="rrow'+(g.done?" done":"")+'" data-id="'+g.id+'">'
         + '<input type="checkbox"'+(g.done?" checked":"")+' aria-label="Erreicht">'
         + '<span>'+esc(g.text)+'</span>'
+        + '<button class="imgbtn gimg">'+(g.img?"Bild ändern":"Bild")+'</button>'
         + '<button class="del" aria-label="Löschen">×</button>'
         + '</div>';
     }).join("");
@@ -889,12 +1003,47 @@
         var g = extras.goals.filter(function(x){return x.id===id;})[0]; if(!g) return;
         g.done = !g.done; persistExtras(); renderDaily();
       });
+      row.querySelector(".gimg").addEventListener("click", function(){
+        visionTarget = {type:"goal", id:id};
+        document.getElementById("visionFile").click();
+      });
       row.querySelector(".del").addEventListener("click", function(){
         if(!confirm("Ziel löschen?")) return;
+        var g = extras.goals.filter(function(x){return x.id===id;})[0];
+        if(g && g.img) removeVision(g.img);
         extras.goals = extras.goals.filter(function(x){return x.id!==id;});
         persistExtras(); renderDaily();
       });
     });
+
+    /* Vision-Board: Ziele mit Bild als Mosaik */
+    var vb = document.getElementById("visionBoard");
+    var withImg = extras.goals.filter(function(g){return g.img;});
+    if(!withImg.length){ vb.hidden = true; vb.innerHTML = ""; }
+    else {
+      vb.hidden = false;
+      vb.innerHTML = withImg.map(function(g){
+        return '<button class="vb-tile" data-path="'+esc(g.img)+'" data-text="'+esc(g.text)+'">'
+          + '<img alt=""><span>'+esc(g.text)+'</span></button>';
+      }).join("");
+      vb.querySelectorAll(".vb-tile").forEach(function(t){
+        var path = t.getAttribute("data-path");
+        visionUrl(path, function(u){ if(u) t.querySelector("img").src = u; });
+        t.addEventListener("click", function(){ openLightbox(path, t.getAttribute("data-text")); });
+      });
+    }
+
+    /* Routine-Visionsbild */
+    var banner = document.getElementById("routineBanner");
+    if(extras.routine_img){
+      visionUrl(extras.routine_img, function(u){ if(u){ banner.src = u; banner.hidden = false; } });
+      document.getElementById("routineImgDel").hidden = false;
+      document.getElementById("routineImgBtn").textContent = "Visionsbild ändern";
+    }else{
+      banner.hidden = true; banner.removeAttribute("src");
+      document.getElementById("routineImgDel").hidden = true;
+      document.getElementById("routineImgBtn").textContent = "Visionsbild wählen";
+    }
   }
   function addRoutine(){
     var inp = document.getElementById("routineInput");
@@ -1519,7 +1668,7 @@
 
   /* ── Start ── */
   sb.auth.getSession().then(function(r){
-    if(r.data && r.data.session){ show("app"); loadProjects(); loadExtras(); loadInbox(); }
+    if(r.data && r.data.session){ uid_ = r.data.session.user.id; show("app"); loadProjects(); loadExtras(); loadInbox(); }
     else show("auth");
   });
 

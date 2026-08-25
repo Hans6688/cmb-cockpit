@@ -103,6 +103,13 @@ Kompakte Buttons mit Stand-Anzeige, die Karten erst auf Klick ausklappen
   geschafft). Routinen lassen sich hinzufügen und löschen.
 - **Meine Ziele** – einfache editierbare Liste zur Orientierung. Eintragen, abhaken
   (bleibt durchgestrichen sichtbar), löschen. Button-Badge: Anzahl offener Ziele.
+  **Vision-Board:** Über „Bild“ bekommt ein Ziel ein eigenes Foto; Ziele mit Bild
+  erscheinen oben in der Karte als Bild-Mosaik mit dem Zieltext über dem Foto.
+  Ein Klick öffnet das Bild bildschirmfüllend mit dem Ziel als Leitsatz.
+  Die Tagesroutine-Karte kann zusätzlich ein „Visionsbild“ als Kopfbild tragen.
+  Bilder werden beim Hochladen automatisch verkleinert und liegen **privat** im
+  Supabase-Storage-Bucket `cockpit-vision` (nur nach Login über kurzlebige,
+  signierte Links abrufbar; Zugriffsregeln pro Nutzerordner).
 - **Eingang** – Sammelkorb für schnelle Notizen vom Apple-Kurzbefehl (Abschnitt 7).
   Jede Notiz kann per Dropdown **„→ als Aufgabe zu …“** in ein Projekt verschoben
   (wird dort ein To-do mit Priorität Mittel) oder gelöscht werden. Button-Badge:
@@ -257,3 +264,4 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 25.08.2026 | Diese Dokumentation angelegt; wird ab jetzt bei jeder Änderung mitgepflegt. |
 | 25.08.2026 | [`AGENTS.md`](AGENTS.md) und [`CLAUDE.md`](CLAUDE.md) angelegt: Briefing und Arbeitsregeln, damit jeder KI-Assistent (auch ohne diese Gesprächshistorie) sofort weiterarbeiten kann. |
 | 25.08.2026 | Abschnitt **„KI & Repository“** in der Detailansicht: Repository- und Claude-Chat-Link pro Projekt speicherbar; Knopf „Mit Claude besprechen“ startet einen neuen Claude-Chat mit automatisch übergebenem Projektkontext. |
+| 25.08.2026 | **Vision-Board**: Bilder pro Ziel (Mosaik + Vollbild-Ansicht mit Leitsatz) und Visionsbild für die Tagesroutine; privater Storage-Bucket `cockpit-vision` mit nutzerbezogenen Zugriffsregeln. |
