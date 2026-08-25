@@ -112,10 +112,11 @@ Kompakte Buttons mit Stand-Anzeige, die Karten erst auf Klick ausklappen
   Bilder werden beim Hochladen automatisch verkleinert und liegen **privat** im
   Supabase-Storage-Bucket `cockpit-vision` (nur nach Login über kurzlebige,
   signierte Links abrufbar; Zugriffsregeln pro Nutzerordner).
-- **Eingang** – Sammelkorb für schnelle Notizen vom Apple-Kurzbefehl (Abschnitt 7).
-  Jede Notiz kann per Dropdown **„→ als Aufgabe zu …“** in ein Projekt verschoben
-  (wird dort ein To-do mit Priorität Mittel) oder gelöscht werden. Button-Badge:
-  „N neu“.
+- **Notizen** (früher „Eingang“) – Sammelkorb für schnelle Notizen: per
+  Apple-Kurzbefehl (Abschnitt 7) **oder direkt in der Karte** über das
+  Eingabefeld. Jede Notiz kann per Dropdown **„→ als Aufgabe zu …“** in ein
+  Projekt verschoben (wird dort ein To-do mit Priorität Mittel) oder über ×
+  gelöscht werden. Button-Badge: „N neu“.
 
 ### 4.3 Projektbereiche mit Kacheln
 Drei aktive Bereiche – **Sprintprojekte**, **Sonstige CMB-Projekte**, **Private
@@ -243,7 +244,7 @@ Schnelle Notizen wandern ohne Umweg ins Cockpit:
 - **Mac:** Teilen-Menü in Apple Notizen (ggf. einmalig unter „Erweiterungen
   bearbeiten …“ aktivieren).
 - Nach dem Versand erscheint die Bestätigung „Im Cockpit ✓“; die Notiz liegt dann
-  im **Eingang** der App.
+  im Bereich **Notizen** der App.
 
 **Technik:** Der Kurzbefehl schickt eine POST-Anfrage an
 `…/rest/v1/rpc/cockpit_add_note` mit dem öffentlichen Schlüssel als Header und
@@ -287,3 +288,4 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 25.08.2026 | **Fokus-Werkzeuge**: Wochenzähler „Geld-Aktionen“ (Angebot/Nachfassen/Rechnung/Livegang, `money_log`) und **WIP-Limit 3** mit neuem Bereich „Warteschleife“ (eingeklappt, ausgegraut); Limit wird bei Drag-and-drop, Bereichswechsel und Neuanlage durchgesetzt. |
 | 25.08.2026 | Fünfte Geld-Aktion **„Content veröffentlicht“** (Start des LinkedIn-Rhythmus Mo/Mi/Fr). |
 | 25.08.2026 | WIP-Limit angepasst: **3 pro Bereich** statt 3 insgesamt (private Kleinaufgaben blockieren so nicht das Geschäftliche). |
+| 25.08.2026 | „Eingang“ in **„Notizen“** umbenannt; Notizen lassen sich jetzt auch direkt in der Karte erstellen (neue Insert-Regel `inbox_insert_own`). |

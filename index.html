@@ -468,7 +468,7 @@
         <span class="chev" aria-hidden="true">▾</span>
       </button>
       <button class="daily-toggle" id="tgInbox" aria-expanded="false">
-        <span class="dia" aria-hidden="true"></span>Eingang
+        <span class="dia" aria-hidden="true"></span>Notizen
         <span class="tg-badge" id="tgInboxBadge"></span>
         <span class="chev" aria-hidden="true">▾</span>
       </button>
@@ -499,9 +499,13 @@
         </div>
       </div>
       <div class="daily-card" id="cardInbox" hidden>
-        <h3>Eingang</h3>
-        <p class="daily-sub">Schnelle Notizen von iPhone &amp; Mac („Ans Cockpit senden“) – einem Projekt zuordnen oder löschen</p>
+        <h3>Notizen</h3>
+        <p class="daily-sub">Per Siri/Kurzbefehl „Ans Cockpit“ oder direkt hier erstellen – einem Projekt zuordnen oder löschen</p>
         <div id="inboxList"></div>
+        <textarea class="input" id="inboxInput" placeholder="Neue Notiz schreiben …"></textarea>
+        <div class="addrow" style="justify-content:flex-end; margin-top:8px">
+          <button class="btn small" id="inboxAdd">Notiz speichern</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1188,6 +1192,18 @@
   bindDailyToggle("tgGoals", "cardGoals");
   bindDailyToggle("tgInbox", "cardInbox", function(){ loadInbox(); });
 
+  document.getElementById("inboxAdd").addEventListener("click", function(){
+    var ta = document.getElementById("inboxInput");
+    var v = ta.value.trim(); if(!v || !uid_) return;
+    sb.from(INBOX_TABLE).insert({user_id: uid_, content: v}).select().then(function(r){
+      if(r.error){ toast("Speichern fehlgeschlagen: "+r.error.message, true); return; }
+      ta.value = "";
+      inbox.unshift(r.data[0]);
+      renderInbox();
+      toast("Notiz gespeichert.");
+    });
+  });
+
   /* ── Eingang (schnelle Notizen per Kurzbefehl) ── */
   var INBOX_TABLE = "cockpit_inbox";
   var inbox = [];
@@ -1204,7 +1220,7 @@
     badge.classList.toggle("all", false);
     var el = document.getElementById("inboxList");
     if(!inbox.length){
-      el.innerHTML = '<div class="empty">Nichts im Eingang. Notizen kommen per Kurzbefehl „Ans Cockpit senden“ hier an.</div>';
+      el.innerHTML = '<div class="empty">Noch keine Notizen – per Kurzbefehl „Ans Cockpit“ oder unten direkt erstellen.</div>';
       return;
     }
     var options = '<option value="">→ als Aufgabe zu …</option>'

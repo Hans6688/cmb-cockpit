@@ -89,6 +89,10 @@ drop policy if exists "inbox_select_own" on public.cockpit_inbox;
 create policy "inbox_select_own" on public.cockpit_inbox
   for select using (auth.uid() = user_id);
 
+drop policy if exists "inbox_insert_own" on public.cockpit_inbox;
+create policy "inbox_insert_own" on public.cockpit_inbox
+  for insert to authenticated with check (auth.uid() = user_id);
+
 drop policy if exists "inbox_delete_own" on public.cockpit_inbox;
 create policy "inbox_delete_own" on public.cockpit_inbox
   for delete using (auth.uid() = user_id);
