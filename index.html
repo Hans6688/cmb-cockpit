@@ -161,9 +161,23 @@
   }
 
   /* ── Tagesroutine & Ziele ── */
-  .daily-grid{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:36px}
-  @media (max-width:760px){ .daily-grid{grid-template-columns:1fr} }
-  .daily-card{background:var(--card); border-radius:20px; padding:22px; box-shadow:var(--shadow)}
+  .daily-wrap{margin-bottom:30px}
+  .daily-toggles{display:flex; gap:12px; flex-wrap:wrap}
+  .daily-toggle{
+    display:flex; align-items:center; gap:10px;
+    background:var(--card); border:0; border-radius:14px; padding:12px 18px;
+    box-shadow:var(--shadow); font-weight:600; font-size:14px; color:var(--ink);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .daily-toggle:hover{transform:translateY(-1px); box-shadow:var(--shadow-lift)}
+  .daily-toggle .dia{width:10px; height:10px; border-radius:3px; background:var(--grad); transform:rotate(45deg); flex:none}
+  .tg-badge{font-size:12px; font-weight:600; background:var(--pill-done-bg); color:var(--pill-done-fg); padding:2px 9px; border-radius:99px; font-variant-numeric:tabular-nums}
+  .tg-badge.all{background:var(--pill-active-bg); color:var(--pill-active-fg)}
+  .daily-toggle .chev{font-size:11px; color:var(--ink-soft); transition:transform .2s ease}
+  .daily-toggle.open .chev{transform:rotate(180deg)}
+  .daily-grid{display:flex; gap:18px; flex-wrap:wrap}
+  .daily-grid:has(.daily-card:not([hidden])){margin-top:14px}
+  .daily-card{flex:1 1 320px; background:var(--card); border-radius:20px; padding:22px; box-shadow:var(--shadow)}
   .daily-card h3{font-family:var(--font-display); font-weight:400; font-size:22px; margin:0 0 2px; display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap}
   .daily-card h3 small{font-family:var(--font-body); font-size:12px; color:var(--ink-soft)}
   .daily-sub{font-size:12px; color:var(--ink-soft); margin:0 0 14px}
@@ -368,23 +382,37 @@
     <button class="btn" id="btnNew">+ Neues Projekt</button>
   </div>
 
-  <div class="daily-grid" id="daily" hidden>
-    <div class="daily-card">
-      <h3>Tagesroutine <small id="dailyDate"></small></h3>
-      <p class="daily-sub">Setzt sich jeden Tag automatisch zurück · „Serie“ = Tage in Folge geschafft</p>
-      <div id="routineList"></div>
-      <div class="addrow">
-        <input type="text" id="routineInput" placeholder="Neue Routine … (Enter)" maxlength="120">
-        <button class="btn small" id="routineAdd">Hinzufügen</button>
-      </div>
+  <div class="daily-wrap" id="daily" hidden>
+    <div class="daily-toggles">
+      <button class="daily-toggle" id="tgRoutine" aria-expanded="false">
+        <span class="dia" aria-hidden="true"></span>Tagesroutine
+        <span class="tg-badge" id="tgRoutineBadge"></span>
+        <span class="chev" aria-hidden="true">▾</span>
+      </button>
+      <button class="daily-toggle" id="tgGoals" aria-expanded="false">
+        <span class="dia" aria-hidden="true"></span>Meine Ziele
+        <span class="tg-badge" id="tgGoalsBadge"></span>
+        <span class="chev" aria-hidden="true">▾</span>
+      </button>
     </div>
-    <div class="daily-card">
-      <h3>Meine Ziele</h3>
-      <p class="daily-sub">Zur Orientierung – abhaken, wenn erreicht</p>
-      <div id="goalList"></div>
-      <div class="addrow">
-        <input type="text" id="goalInput" placeholder="Neues Ziel … (Enter)" maxlength="200">
-        <button class="btn small" id="goalAdd">Hinzufügen</button>
+    <div class="daily-grid">
+      <div class="daily-card" id="cardRoutine" hidden>
+        <h3>Tagesroutine <small id="dailyDate"></small></h3>
+        <p class="daily-sub">Setzt sich jeden Tag automatisch zurück · „Serie“ = Tage in Folge geschafft</p>
+        <div id="routineList"></div>
+        <div class="addrow">
+          <input type="text" id="routineInput" placeholder="Neue Routine … (Enter)" maxlength="120">
+          <button class="btn small" id="routineAdd">Hinzufügen</button>
+        </div>
+      </div>
+      <div class="daily-card" id="cardGoals" hidden>
+        <h3>Meine Ziele</h3>
+        <p class="daily-sub">Zur Orientierung – abhaken, wenn erreicht</p>
+        <div id="goalList"></div>
+        <div class="addrow">
+          <input type="text" id="goalInput" placeholder="Neues Ziel … (Enter)" maxlength="200">
+          <button class="btn small" id="goalAdd">Hinzufügen</button>
+        </div>
       </div>
     </div>
   </div>
@@ -763,6 +791,14 @@
     document.getElementById("dailyDate").textContent =
       new Date().toLocaleDateString("de-DE",{weekday:"long", day:"numeric", month:"long"});
 
+    var doneToday = extras.routines.filter(function(rt){ return (rt.done||{})[today]; }).length;
+    var rb = document.getElementById("tgRoutineBadge");
+    rb.textContent = doneToday+" / "+extras.routines.length+" heute";
+    rb.classList.toggle("all", extras.routines.length>0 && doneToday===extras.routines.length);
+    var openGoals = extras.goals.filter(function(g){ return !g.done; }).length;
+    document.getElementById("tgGoalsBadge").textContent =
+      extras.goals.length ? openGoals+" offen" : "leer";
+
     var rl = document.getElementById("routineList");
     if(!extras.routines.length){ rl.innerHTML = '<div class="empty">Noch keine Routinen.</div>'; }
     else rl.innerHTML = extras.routines.map(function(rt){
@@ -827,6 +863,17 @@
     extras.goals.push({id:uid(), text:v, done:false});
     inp.value = ""; persistExtras(); renderDaily();
   }
+  function bindDailyToggle(btnId, cardId){
+    var btn = document.getElementById(btnId), card = document.getElementById(cardId);
+    btn.addEventListener("click", function(){
+      card.hidden = !card.hidden;
+      btn.classList.toggle("open", !card.hidden);
+      btn.setAttribute("aria-expanded", String(!card.hidden));
+    });
+  }
+  bindDailyToggle("tgRoutine", "cardRoutine");
+  bindDailyToggle("tgGoals", "cardGoals");
+
   document.getElementById("routineAdd").addEventListener("click", addRoutine);
   document.getElementById("routineInput").addEventListener("keydown", function(e){ if(e.key==="Enter") addRoutine(); });
   document.getElementById("goalAdd").addEventListener("click", addGoal);
