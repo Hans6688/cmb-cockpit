@@ -139,6 +139,12 @@ Seitliches Panel mit:
 - **Notizen:** freie Projektnotizen mit Datum.
 - **Google Drive & Dokumente:** Links einfügen – die App erkennt automatisch
   Drive-Ordner, Google Docs/Sheets/Präsentationen und benennt die Verknüpfung.
+- **KI & Repository:** Pro Projekt lassen sich der Link zum GitHub-Repository und
+  zu einem festen Claude-Chat/-Projekt speichern. Der Knopf **„Mit Claude
+  besprechen“** öffnet einen neuen Claude-Chat und übergibt automatisch den
+  Kontext: Projektname, Status, die fünf dringendsten offenen Aufgaben (mit
+  Priorität und Termin) sowie den Repository-Link mit dem Hinweis, zuerst
+  AGENTS.md und DOKUMENTATION.md zu lesen.
 - **Transkripte:** längere Texte (z. B. Gesprächsprotokolle) mit Titel und Datum,
   platzsparend eingeklappt, per Klick aufklappbar.
 
@@ -250,3 +256,4 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 25.08.2026 | **Eingang** für schnelle Notizen (`cockpit_inbox`, RPC `cockpit_add_note` mit Geheimcode); Zuordnung zu Projekten per Dropdown; **Apple-Kurzbefehl „Ans Cockpit“** gebaut, signiert, installiert und Ende-zu-Ende getestet (Siri, Teilen-Menü, iCloud-Sync). |
 | 25.08.2026 | Diese Dokumentation angelegt; wird ab jetzt bei jeder Änderung mitgepflegt. |
 | 25.08.2026 | [`AGENTS.md`](AGENTS.md) und [`CLAUDE.md`](CLAUDE.md) angelegt: Briefing und Arbeitsregeln, damit jeder KI-Assistent (auch ohne diese Gesprächshistorie) sofort weiterarbeiten kann. |
+| 25.08.2026 | Abschnitt **„KI & Repository“** in der Detailansicht: Repository- und Claude-Chat-Link pro Projekt speicherbar; Knopf „Mit Claude besprechen“ startet einen neuen Claude-Chat mit automatisch übergebenem Projektkontext. |

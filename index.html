@@ -507,6 +507,22 @@
     </div>
 
     <div class="section">
+      <h3>KI &amp; Repository</h3>
+      <div id="aiLinks"></div>
+      <div class="addrow">
+        <input type="url" id="repoInput" placeholder="GitHub-Repository-Link (optional)">
+        <button class="btn ghost small" id="repoSave">Speichern</button>
+      </div>
+      <div class="addrow">
+        <input type="url" id="aiChatInput" placeholder="Claude-Chat- oder Projekt-Link (optional)">
+        <button class="btn ghost small" id="aiChatSave">Speichern</button>
+      </div>
+      <div class="addrow" style="justify-content:flex-start">
+        <button class="btn small" id="btnAskClaude">Mit Claude besprechen – neuer Chat</button>
+      </div>
+    </div>
+
+    <div class="section">
       <h3>Transkripte</h3>
       <div id="trList"></div>
       <button class="btn ghost small" id="trToggle">+ Transkript hinzufügen</button>
@@ -1170,7 +1186,7 @@
     document.getElementById("pSub").textContent = p.sub||"";
     document.getElementById("pStatus").value = p.status;
     document.getElementById("pCategory").value = p.category||"cmb";
-    renderTodos(); renderNotes(); renderDocs(); renderTranscripts();
+    renderTodos(); renderNotes(); renderDocs(); renderTranscripts(); renderAiLinks();
     overlay.classList.add("open"); panel.classList.add("open");
     document.body.style.overflow = "hidden";
   }
@@ -1373,6 +1389,55 @@
   }
   document.getElementById("docAdd").addEventListener("click", addDoc);
   document.getElementById("docUrl").addEventListener("keydown", function(e){ if(e.key==="Enter") addDoc(); });
+
+  /* ── KI & Repository ── */
+  function renderAiLinks(){
+    var p = current(); if(!p) return;
+    document.getElementById("repoInput").value = p.data.repo || "";
+    document.getElementById("aiChatInput").value = p.data.ai_link || "";
+    var el = document.getElementById("aiLinks");
+    var html = "";
+    if(p.data.repo){
+      html += '<a class="doc" href="'+esc(p.data.repo)+'" target="_blank" rel="noopener">'
+        + '<div class="ic">⌘</div><div><b>Repository öffnen</b><small>'+esc(p.data.repo)+'</small></div></a>';
+    }
+    if(p.data.ai_link){
+      html += '<a class="doc" href="'+esc(p.data.ai_link)+'" target="_blank" rel="noopener">'
+        + '<div class="ic">✳</div><div><b>Gespeicherten Claude-Chat öffnen</b><small>'+esc(p.data.ai_link)+'</small></div></a>';
+    }
+    el.innerHTML = html || '<div class="empty">Noch keine Verknüpfungen – Links unten einfügen und speichern.</div>';
+  }
+  function saveAiLink(inputId, field){
+    var v = document.getElementById(inputId).value.trim();
+    if(v && !/^https?:\/\//i.test(v)){ toast("Bitte einen vollständigen Link einfügen (beginnt mit https://).", true); return; }
+    var p = current(); if(!p) return;
+    p.data[field] = v || null;
+    persist(p); renderAiLinks();
+    toast(v ? "Verknüpfung gespeichert." : "Verknüpfung entfernt.");
+  }
+  document.getElementById("repoSave").addEventListener("click", function(){ saveAiLink("repoInput","repo"); });
+  document.getElementById("aiChatSave").addEventListener("click", function(){ saveAiLink("aiChatInput","ai_link"); });
+
+  document.getElementById("btnAskClaude").addEventListener("click", function(){
+    var p = current(); if(!p) return;
+    var openList = (p.data.todos||[]).filter(function(t){return !t.done;}).sort(compareTodos).slice(0,5);
+    var teile = [];
+    teile.push('Ich arbeite an meinem Projekt "'+p.name+'"'+(p.sub ? ' ('+p.sub+')' : '')+'.');
+    teile.push('Status: '+(STATUS_LABEL[p.status]||p.status)+'.');
+    if(openList.length){
+      teile.push('Offene Aufgaben: '+openList.map(function(t){
+        var s = t.text;
+        if(t.prio==="hoch") s += " (Priorität hoch)";
+        if(t.due) s += " (Termin "+fmtShort(t.due)+")";
+        return s;
+      }).join("; ")+'.');
+    }
+    if(p.data.repo){
+      teile.push('GitHub-Repository: '+p.data.repo+' – lies dort zuerst AGENTS.md und DOKUMENTATION.md.');
+    }
+    teile.push('Ich bin kein Programmierer – bitte Alltagssprache. Hilf mir bei den nächsten Schritten.');
+    window.open('https://claude.ai/new?q='+encodeURIComponent(teile.join(' ')), '_blank', 'noopener');
+  });
 
   /* ── Transkripte ── */
   function renderTranscripts(){
