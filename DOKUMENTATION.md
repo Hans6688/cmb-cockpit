@@ -130,7 +130,8 @@ Liegt der Bestand über dem Limit, mahnt ein Hinweis-Banner über den Bereichen.
 
 **Geld-Aktionen-Zähler:** Vierte Kennzahl im Kopfbereich („Geld-Aktionen
 Woche“). Über den +-Knopf werden umsatzwirksame Handlungen erfasst – *Angebot
-gesendet, Nachgefasst, Rechnung gestellt, Livegang* (plus Rückgängig-Funktion).
+gesendet, Nachgefasst, Rechnung gestellt, Livegang, Content veröffentlicht*
+(plus Rückgängig-Funktion).
 Gezählt wird pro Kalenderwoche (`money_log` in `cockpit_extras`), die Vorwoche
 bleibt zum Vergleich sichtbar; bei 0 färbt sich die Zahl warnend orange.
 
@@ -283,3 +284,4 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 25.08.2026 | **Vision-Board**: Bilder pro Ziel (Mosaik + Vollbild-Ansicht mit Leitsatz) und Visionsbild für die Tagesroutine; privater Storage-Bucket `cockpit-vision` mit nutzerbezogenen Zugriffsregeln. |
 | 25.08.2026 | Tagesroutine: **Visionsbild-Rotation** – mehrere Bilder (`routine_imgs`), täglich wechselndes Kopfbild; Verwaltung über „Bild hinzufügen“ / „heutiges Bild entfernen“. |
 | 25.08.2026 | **Fokus-Werkzeuge**: Wochenzähler „Geld-Aktionen“ (Angebot/Nachfassen/Rechnung/Livegang, `money_log`) und **WIP-Limit 3** mit neuem Bereich „Warteschleife“ (eingeklappt, ausgegraut); Limit wird bei Drag-and-drop, Bereichswechsel und Neuanlage durchgesetzt. |
+| 25.08.2026 | Fünfte Geld-Aktion **„Content veröffentlicht“** (Start des LinkedIn-Rhythmus Mo/Mi/Fr). |

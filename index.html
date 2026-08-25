@@ -447,6 +447,7 @@
           <button data-t="nachfass">Nachgefasst</button>
           <button data-t="rechnung">Rechnung gestellt</button>
           <button data-t="livegang">Livegang</button>
+          <button data-t="content">Content veröffentlicht</button>
           <button data-t="undo" class="undo">letzte rückgängig machen</button>
         </div>
       </div>
@@ -1010,7 +1011,7 @@
       }
     }else{
       extras.money_log.push({d:dateKey(new Date()), w:wk, t:t});
-      var namen = {angebot:"Angebot gesendet", nachfass:"Nachgefasst", rechnung:"Rechnung gestellt", livegang:"Livegang"};
+      var namen = {angebot:"Angebot gesendet", nachfass:"Nachgefasst", rechnung:"Rechnung gestellt", livegang:"Livegang", content:"Content veröffentlicht"};
       toast(namen[t]+" – zählt! 💪");
       /* Einträge älter als ~6 Monate aufräumen */
       if(extras.money_log.length > 500) extras.money_log = extras.money_log.slice(-400);
