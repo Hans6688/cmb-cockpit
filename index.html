@@ -160,7 +160,24 @@
     text-align:center; color:var(--ink-soft); font-size:13.5px; font-style:italic; pointer-events:none;
   }
   .grid:has(.tile) .drop-hint{display:none}
-  .dnd-tip{font-size:12.5px; color:var(--ink-soft); margin:-8px 0 22px}
+  .dnd-tip{font-size:12.5px; color:var(--ink-soft); margin:-8px 0 10px}
+
+  /* ── Priorität & Termine ── */
+  .tile{border-left:4px solid transparent}
+  .tile.prio-hoch{border-left-color:#ff4732}
+  .tile.prio-mittel{border-left-color:var(--sand)}
+  .tile.prio-niedrig{border-left-color:var(--moss)}
+  .due{font-size:12px; font-weight:600; padding:3px 10px; border-radius:99px; white-space:nowrap; font-variant-numeric:tabular-nums}
+  .due.ok{background:var(--pill-done-bg); color:var(--pill-done-fg)}
+  .due.soon{background:var(--pill-review-bg); color:var(--pill-review-fg)}
+  .due.urgent{background:var(--pill-wait-bg); color:var(--pill-wait-fg)}
+  .legend{display:flex; gap:16px; align-items:center; font-size:12px; color:var(--ink-soft); margin:0 0 24px; flex-wrap:wrap}
+  .legend i{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px}
+  input.datefield{
+    border:1.5px solid var(--line); background:var(--card); border-radius:10px;
+    padding:6px 10px; font-size:13px; font-weight:600; outline:none; color-scheme:light dark;
+  }
+  input.datefield:focus{border-color:var(--orange)}
 
   .empty-state{
     grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--ink-soft);
@@ -357,6 +374,12 @@
         <option value="cmb">Sonstige CMB-Projekte</option>
         <option value="privat">Private Projekte</option>
       </select>
+      <select class="status" id="pPriority" aria-label="Priorität">
+        <option value="niedrig">Priorität: Niedrig</option>
+        <option value="mittel">Priorität: Mittel</option>
+        <option value="hoch">Priorität: Hoch</option>
+      </select>
+      <input type="date" class="datefield" id="pDue" aria-label="Termin">
       <button class="btn danger small" id="btnDelete">Projekt löschen</button>
     </div>
   </div>
@@ -435,6 +458,20 @@
         <option value="cmb">Sonstige CMB-Projekte</option>
         <option value="privat">Private Projekte</option>
       </select>
+    </div>
+    <div style="display:flex; gap:12px">
+      <div style="flex:1">
+        <label for="npPriority">Priorität</label>
+        <select id="npPriority">
+          <option value="niedrig">Niedrig</option>
+          <option value="mittel" selected>Mittel</option>
+          <option value="hoch">Hoch</option>
+        </select>
+      </div>
+      <div style="flex:1">
+        <label for="npDue">Termin (optional)</label>
+        <input type="date" id="npDue" class="datefield" style="width:100%; padding:11px 14px; border-radius:11px">
+      </div>
     </div>
     <div class="actions">
       <button class="btn ghost" id="npCancel">Abbrechen</button>
@@ -615,10 +652,36 @@
 
   function persist(p){
     p.updated_at = new Date().toISOString();
-    sb.from(TABLE).update({name:p.name, sub:p.sub, status:p.status, data:p.data, updated_at:p.updated_at})
-      .eq("id", p.id).then(function(r){
+    sb.from(TABLE).update({
+      name:p.name, sub:p.sub, status:p.status, data:p.data,
+      category:p.category||"cmb", sort_order:p.sort_order||0,
+      priority:p.priority||"mittel", due_date:p.due_date||null,
+      updated_at:p.updated_at
+    }).eq("id", p.id).then(function(r){
         if(r.error) toast("Speichern fehlgeschlagen – bitte Internetverbindung prüfen.", true);
       });
+  }
+
+  /* Priorität: Termin naht → automatisch hochstufen */
+  function daysUntil(s){
+    var parts = s.split("-");
+    var d = new Date(+parts[0], +parts[1]-1, +parts[2]);
+    var t = new Date(); t.setHours(0,0,0,0);
+    return Math.round((d - t)/86400000);
+  }
+  function effectivePriority(p){
+    var base = p.priority || "mittel";
+    if(p.status==="fertig") return base;
+    if(p.due_date){
+      var days = daysUntil(p.due_date);
+      if(days<=3) return "hoch";
+      if(days<=7 && base==="niedrig") return "mittel";
+    }
+    return base;
+  }
+  function fmtShort(s){
+    var parts = s.split("-");
+    return parts[2]+"."+parts[1]+".";
   }
 
   /* ── Grid: Bereiche + Drag-and-drop ── */
@@ -632,13 +695,21 @@
     var total = (d.todos||[]).length;
     var pct = total ? Math.round((total-open)/total*100) : 0;
     var countText = total ? (total-open)+" / "+total+" erledigt" : "keine To-dos";
-    return '<button class="tile" draggable="true" data-id="'+p.id+'">'
+    var dueHtml = "";
+    if(p.due_date && p.status!=="fertig"){
+      var days = daysUntil(p.due_date);
+      var dueCls = days<=3 ? "urgent" : (days<=7 ? "soon" : "ok");
+      var rel = days<0 ? "überfällig" : days===0 ? "heute" : days===1 ? "morgen" : "in "+days+" Tagen";
+      dueHtml = '<span class="due '+dueCls+'">'+fmtShort(p.due_date)+' · '+rel+'</span>';
+    }
+    return '<button class="tile prio-'+effectivePriority(p)+'" draggable="true" data-id="'+p.id+'">'
       + '<div class="tile-top">'
       +   '<div class="avatar'+(p.status==="fertig"?" calm":"")+'"><b>'+esc(initials(p.name))+'</b></div>'
       +   '<div style="flex:1;min-width:0"><h2>'+esc(p.name)+'</h2><div class="sub">'+esc(p.sub||"")+'</div></div>'
       +   '<span class="pill '+esc(p.status)+'">'+(STATUS_LABEL[p.status]||p.status)+'</span>'
       + '</div>'
       + '<div class="tile-meta">'
+      +   dueHtml
       +   '<div class="bar"><i style="width:'+pct+'%"></i></div>'
       +   '<span class="count">'+countText+'</span>'
       + '</div>'
@@ -670,7 +741,13 @@
       updateStats();
       return;
     }
-    var html = '<p class="dnd-tip">Tipp: Kacheln per Ziehen ordnen oder in einen anderen Bereich verschieben.</p>';
+    var html = '<p class="dnd-tip">Tipp: Kacheln per Ziehen ordnen oder in einen anderen Bereich verschieben.</p>'
+      + '<div class="legend">'
+      + '<span><i style="background:#ff4732"></i>Hoch</span>'
+      + '<span><i style="background:#c4a882"></i>Mittel</span>'
+      + '<span><i style="background:#4d7a5e"></i>Niedrig</span>'
+      + '<span>· Termin in ≤ 7 Tagen stuft automatisch hoch, ≤ 3 Tagen = Hoch</span>'
+      + '</div>';
     CATEGORIES.forEach(function(cat){
       var items = data.filter(function(p){ return (p.category||"cmb")===cat.key; })
         .sort(function(a,b){ return (a.sort_order||0)-(b.sort_order||0); });
@@ -777,6 +854,8 @@
     document.getElementById("pSub").textContent = p.sub||"";
     document.getElementById("pStatus").value = p.status;
     document.getElementById("pCategory").value = p.category||"cmb";
+    document.getElementById("pPriority").value = p.priority||"mittel";
+    document.getElementById("pDue").value = p.due_date||"";
     renderTodos(); renderNotes(); renderDocs(); renderTranscripts();
     overlay.classList.add("open"); panel.classList.add("open");
     document.body.style.overflow = "hidden";
@@ -800,6 +879,16 @@
   document.getElementById("pStatus").addEventListener("change", function(){
     var p = current(); if(!p) return;
     p.status = this.value; persist(p);
+  });
+
+  document.getElementById("pPriority").addEventListener("change", function(){
+    var p = current(); if(!p) return;
+    p.priority = this.value; persist(p);
+  });
+
+  document.getElementById("pDue").addEventListener("change", function(){
+    var p = current(); if(!p) return;
+    p.due_date = this.value || null; persist(p);
   });
 
   document.getElementById("pCategory").addEventListener("change", function(){
@@ -989,6 +1078,8 @@
     document.getElementById("npName").value="";
     document.getElementById("npSub").value="";
     document.getElementById("npStatus").value="aktiv";
+    document.getElementById("npPriority").value="mittel";
+    document.getElementById("npDue").value="";
     document.getElementById("npName").focus();
   }
   function closeModal(){ modal.classList.remove("open"); }
@@ -1007,6 +1098,8 @@
       status:document.getElementById("npStatus").value,
       category:cat,
       sort_order:maxOrder+1,
+      priority:document.getElementById("npPriority").value,
+      due_date:document.getElementById("npDue").value || null,
       data:emptyData()
     };
     var btn = this; btn.disabled = true;

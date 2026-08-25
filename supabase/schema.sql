@@ -11,6 +11,8 @@ create table if not exists public.cockpit_projects (
   status      text not null default 'aktiv',
   category    text not null default 'cmb',
   sort_order  integer not null default 0,
+  priority    text not null default 'mittel',
+  due_date    date,
   data        jsonb not null default '{"todos":[],"notes":[],"docs":[],"transcripts":[]}'::jsonb,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
@@ -37,4 +39,6 @@ create policy "cockpit_delete_own" on public.cockpit_projects
 -- Nachrüstung für bestehende Installationen (harmlos, wenn schon vorhanden):
 alter table public.cockpit_projects
   add column if not exists category text not null default 'cmb',
-  add column if not exists sort_order integer not null default 0;
+  add column if not exists sort_order integer not null default 0,
+  add column if not exists priority text not null default 'mittel',
+  add column if not exists due_date date;
