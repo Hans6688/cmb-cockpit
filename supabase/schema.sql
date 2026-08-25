@@ -42,3 +42,30 @@ alter table public.cockpit_projects
   add column if not exists sort_order integer not null default 0,
   add column if not exists priority text not null default 'mittel',
   add column if not exists due_date date;
+
+-- Tagesroutinen & Ziele (eine Zeile pro Nutzer)
+create table if not exists public.cockpit_extras (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null unique default auth.uid() references auth.users(id) on delete cascade,
+  routines    jsonb not null default '[]'::jsonb,
+  goals       jsonb not null default '[]'::jsonb,
+  updated_at  timestamptz not null default now()
+);
+
+alter table public.cockpit_extras enable row level security;
+
+drop policy if exists "extras_select_own" on public.cockpit_extras;
+create policy "extras_select_own" on public.cockpit_extras
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "extras_insert_own" on public.cockpit_extras;
+create policy "extras_insert_own" on public.cockpit_extras
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "extras_update_own" on public.cockpit_extras;
+create policy "extras_update_own" on public.cockpit_extras
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "extras_delete_own" on public.cockpit_extras;
+create policy "extras_delete_own" on public.cockpit_extras
+  for delete using (auth.uid() = user_id);

@@ -159,6 +159,21 @@
     grid-column:1/-1; border:2px dashed var(--line); border-radius:16px; padding:24px;
     text-align:center; color:var(--ink-soft); font-size:13.5px; font-style:italic; pointer-events:none;
   }
+
+  /* ── Tagesroutine & Ziele ── */
+  .daily-grid{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:36px}
+  @media (max-width:760px){ .daily-grid{grid-template-columns:1fr} }
+  .daily-card{background:var(--card); border-radius:20px; padding:22px; box-shadow:var(--shadow)}
+  .daily-card h3{font-family:var(--font-display); font-weight:400; font-size:22px; margin:0 0 2px; display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap}
+  .daily-card h3 small{font-family:var(--font-body); font-size:12px; color:var(--ink-soft)}
+  .daily-sub{font-size:12px; color:var(--ink-soft); margin:0 0 14px}
+  .rrow{display:flex; align-items:center; gap:12px; background:var(--card-soft); border-radius:12px; padding:10px 12px; margin-bottom:8px}
+  .rrow input[type=checkbox]{width:19px; height:19px; accent-color:var(--moss); flex:none; cursor:pointer}
+  .rrow span{flex:1}
+  .rrow.done > span{color:var(--ink-soft); text-decoration:line-through}
+  .rrow .del{border:0; background:none; color:var(--ink-soft); font-size:16px; padding:2px 6px; border-radius:8px; opacity:.55; cursor:pointer}
+  .rrow .del:hover{opacity:1; color:var(--pill-wait-fg)}
+  .streak{font-size:11.5px; font-weight:600; background:var(--pill-review-bg); color:var(--pill-review-fg); padding:3px 9px; border-radius:99px; white-space:nowrap}
   .grid:has(.tile) .drop-hint{display:none}
   .dnd-tip{font-size:12.5px; color:var(--ink-soft); margin:-8px 0 10px}
 
@@ -351,6 +366,27 @@
       <div class="stat"><b id="statActive">0</b><span>aktiv</span></div>
     </div>
     <button class="btn" id="btnNew">+ Neues Projekt</button>
+  </div>
+
+  <div class="daily-grid" id="daily" hidden>
+    <div class="daily-card">
+      <h3>Tagesroutine <small id="dailyDate"></small></h3>
+      <p class="daily-sub">Setzt sich jeden Tag automatisch zurück · „Serie“ = Tage in Folge geschafft</p>
+      <div id="routineList"></div>
+      <div class="addrow">
+        <input type="text" id="routineInput" placeholder="Neue Routine … (Enter)" maxlength="120">
+        <button class="btn small" id="routineAdd">Hinzufügen</button>
+      </div>
+    </div>
+    <div class="daily-card">
+      <h3>Meine Ziele</h3>
+      <p class="daily-sub">Zur Orientierung – abhaken, wenn erreicht</p>
+      <div id="goalList"></div>
+      <div class="addrow">
+        <input type="text" id="goalInput" placeholder="Neues Ziel … (Enter)" maxlength="200">
+        <button class="btn small" id="goalAdd">Hinzufügen</button>
+      </div>
+    </div>
   </div>
 
   <div class="loading" id="loading">Projekte werden geladen …</div>
@@ -594,7 +630,11 @@
   document.getElementById("authPass").addEventListener("keydown", function(e){ if(e.key==="Enter") doAuth(); });
 
   document.getElementById("btnLogout").addEventListener("click", function(){
-    sb.auth.signOut().then(function(){ data = []; show("auth"); });
+    sb.auth.signOut().then(function(){
+      data = []; extras = null;
+      document.getElementById("daily").hidden = true;
+      show("auth");
+    });
   });
 
   /* Passwort-Wiederherstellung */
@@ -611,7 +651,7 @@
 
   sb.auth.onAuthStateChange(function(event, session){
     if(event === "PASSWORD_RECOVERY"){ pwModal.classList.add("open"); return; }
-    if(session){ show("app"); loadProjects(); }
+    if(session){ show("app"); loadProjects(); loadExtras(); }
     else{ show("auth"); }
   });
 
@@ -680,6 +720,117 @@
     return "in "+days+(kurz?" T.":" Tagen");
   }
   function dueClass(days){ return days<=3 ? "urgent" : (days<=7 ? "soon" : "ok"); }
+
+  /* ── Tagesroutine & Ziele ── */
+  var EXTRAS_TABLE = "cockpit_extras";
+  var extras = null;
+  function dateKey(d){
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  }
+  function streakOf(rt){
+    var n = 0, d = new Date(), done = rt.done||{};
+    if(!done[dateKey(d)]) d.setDate(d.getDate()-1);
+    while(done[dateKey(d)]){ n++; d.setDate(d.getDate()-1); }
+    return n;
+  }
+  function loadExtras(){
+    sb.from(EXTRAS_TABLE).select("*").limit(1).then(function(r){
+      if(r.error){ toast("Routinen konnten nicht geladen werden: "+r.error.message, true); return; }
+      if(r.data && r.data.length){ extras = r.data[0]; renderDaily(); return; }
+      var def = {routines:[
+        {id:uid(), text:"Morgenroutine mit Sport", done:{}},
+        {id:uid(), text:"Marketing-Zeit (fester Block)", done:{}},
+        {id:uid(), text:"Padeltraining", done:{}},
+        {id:uid(), text:"Kontaktpflege Freunde & Familie", done:{}}
+      ], goals:[]};
+      sb.from(EXTRAS_TABLE).insert(def).select().then(function(r2){
+        if(r2.error){ toast("Routinen konnten nicht angelegt werden: "+r2.error.message, true); return; }
+        extras = r2.data[0]; renderDaily();
+      });
+    });
+  }
+  function persistExtras(){
+    extras.updated_at = new Date().toISOString();
+    sb.from(EXTRAS_TABLE).update({routines:extras.routines, goals:extras.goals, updated_at:extras.updated_at})
+      .eq("id", extras.id).then(function(r){
+        if(r.error) toast("Speichern fehlgeschlagen – bitte Internetverbindung prüfen.", true);
+      });
+  }
+  function renderDaily(){
+    if(!extras) return;
+    document.getElementById("daily").hidden = false;
+    var today = dateKey(new Date());
+    document.getElementById("dailyDate").textContent =
+      new Date().toLocaleDateString("de-DE",{weekday:"long", day:"numeric", month:"long"});
+
+    var rl = document.getElementById("routineList");
+    if(!extras.routines.length){ rl.innerHTML = '<div class="empty">Noch keine Routinen.</div>'; }
+    else rl.innerHTML = extras.routines.map(function(rt){
+      var done = !!(rt.done||{})[today];
+      var s = streakOf(rt);
+      return '<div class="rrow'+(done?" done":"")+'" data-id="'+rt.id+'">'
+        + '<input type="checkbox"'+(done?" checked":"")+' aria-label="Heute erledigt">'
+        + '<span>'+esc(rt.text)+'</span>'
+        + (s>=2 ? '<span class="streak">Serie '+s+'</span>' : '')
+        + '<button class="del" aria-label="Löschen">×</button>'
+        + '</div>';
+    }).join("");
+    rl.querySelectorAll(".rrow").forEach(function(row){
+      var id = row.getAttribute("data-id");
+      row.querySelector("input").addEventListener("change", function(){
+        var rt = extras.routines.filter(function(x){return x.id===id;})[0]; if(!rt) return;
+        rt.done = rt.done||{};
+        if(rt.done[today]) delete rt.done[today]; else rt.done[today] = true;
+        var cutoff = new Date(); cutoff.setDate(cutoff.getDate()-90);
+        var ck = dateKey(cutoff);
+        Object.keys(rt.done).forEach(function(k){ if(k < ck) delete rt.done[k]; });
+        persistExtras(); renderDaily();
+      });
+      row.querySelector(".del").addEventListener("click", function(){
+        if(!confirm("Routine löschen? Auch die Serie geht verloren.")) return;
+        extras.routines = extras.routines.filter(function(x){return x.id!==id;});
+        persistExtras(); renderDaily();
+      });
+    });
+
+    var gl = document.getElementById("goalList");
+    if(!extras.goals.length){ gl.innerHTML = '<div class="empty">Noch keine Ziele eingetragen.</div>'; }
+    else gl.innerHTML = extras.goals.map(function(g){
+      return '<div class="rrow'+(g.done?" done":"")+'" data-id="'+g.id+'">'
+        + '<input type="checkbox"'+(g.done?" checked":"")+' aria-label="Erreicht">'
+        + '<span>'+esc(g.text)+'</span>'
+        + '<button class="del" aria-label="Löschen">×</button>'
+        + '</div>';
+    }).join("");
+    gl.querySelectorAll(".rrow").forEach(function(row){
+      var id = row.getAttribute("data-id");
+      row.querySelector("input").addEventListener("change", function(){
+        var g = extras.goals.filter(function(x){return x.id===id;})[0]; if(!g) return;
+        g.done = !g.done; persistExtras(); renderDaily();
+      });
+      row.querySelector(".del").addEventListener("click", function(){
+        if(!confirm("Ziel löschen?")) return;
+        extras.goals = extras.goals.filter(function(x){return x.id!==id;});
+        persistExtras(); renderDaily();
+      });
+    });
+  }
+  function addRoutine(){
+    var inp = document.getElementById("routineInput");
+    var v = inp.value.trim(); if(!v || !extras) return;
+    extras.routines.push({id:uid(), text:v, done:{}});
+    inp.value = ""; persistExtras(); renderDaily();
+  }
+  function addGoal(){
+    var inp = document.getElementById("goalInput");
+    var v = inp.value.trim(); if(!v || !extras) return;
+    extras.goals.push({id:uid(), text:v, done:false});
+    inp.value = ""; persistExtras(); renderDaily();
+  }
+  document.getElementById("routineAdd").addEventListener("click", addRoutine);
+  document.getElementById("routineInput").addEventListener("keydown", function(e){ if(e.key==="Enter") addRoutine(); });
+  document.getElementById("goalAdd").addEventListener("click", addGoal);
+  document.getElementById("goalInput").addEventListener("keydown", function(e){ if(e.key==="Enter") addGoal(); });
   function fmtShort(s){
     var parts = s.split("-");
     return parts[2]+"."+parts[1]+".";
@@ -1156,7 +1307,7 @@
 
   /* ── Start ── */
   sb.auth.getSession().then(function(r){
-    if(r.data && r.data.session){ show("app"); loadProjects(); }
+    if(r.data && r.data.session){ show("app"); loadProjects(); loadExtras(); }
     else show("auth");
   });
 
