@@ -6,6 +6,9 @@ To-dos, Notizen, Google-Drive-Verknüpfungen und Transkripten – im CMB-Markend
 
 **Live:** https://hans6688.github.io/cmb-cockpit/
 
+**➜ Ausführliche Dokumentation aller Funktionen, der Architektur und des Datenmodells:
+[DOKUMENTATION.md](DOKUMENTATION.md)** (wird bei jeder Änderung mitgepflegt, inkl. Änderungsprotokoll)
+
 ## Wie es funktioniert
 
 - **Oberfläche:** eine einzige statische Seite (`index.html`), gehostet kostenlos über GitHub Pages.
