@@ -866,13 +866,16 @@
     var f = this.files[0]; this.value = "";
     if(!f || !visionTarget || !uid_ || !extras) return;
     var path = visionTarget.type==="routine"
-      ? uid_+"/routine-banner.jpg"
+      ? uid_+"/routine-"+uid()+".jpg"
       : uid_+"/ziel-"+visionTarget.id+".jpg";
     var target = visionTarget;
     toast("Bild wird hochgeladen …");
     uploadVision(f, path, function(ok){
       if(!ok) return;
-      if(target.type==="routine"){ extras.routine_img = path; }
+      if(target.type==="routine"){
+        extras.routine_imgs = extras.routine_imgs || [];
+        extras.routine_imgs.push(path);
+      }
       else {
         var g = extras.goals.filter(function(x){return x.id===target.id;})[0];
         if(g) g.img = path;
@@ -886,9 +889,12 @@
     document.getElementById("visionFile").click();
   });
   document.getElementById("routineImgDel").addEventListener("click", function(){
-    if(!extras || !extras.routine_img) return;
-    removeVision(extras.routine_img);
-    extras.routine_img = null;
+    if(!extras || !extras.routine_imgs || !extras.routine_imgs.length) return;
+    var banner = document.getElementById("routineBanner");
+    var path = banner.getAttribute("data-path");
+    if(!path || !confirm("Dieses Visionsbild aus der Rotation entfernen?")) return;
+    removeVision(path);
+    extras.routine_imgs = extras.routine_imgs.filter(function(p){return p!==path;});
     persistExtras(); renderDaily();
   });
   function openLightbox(path, text){
@@ -904,7 +910,8 @@
     document.getElementById("lbImg").removeAttribute("src");
   });
   document.getElementById("routineBanner").addEventListener("click", function(){
-    if(extras && extras.routine_img) openLightbox(extras.routine_img, "");
+    var path = this.getAttribute("data-path");
+    if(path) openLightbox(path, "");
   });
 
   /* ── Tagesroutine & Ziele ── */
@@ -937,8 +944,10 @@
   }
   function persistExtras(){
     extras.updated_at = new Date().toISOString();
-    sb.from(EXTRAS_TABLE).update({routines:extras.routines, goals:extras.goals, updated_at:extras.updated_at})
-      .eq("id", extras.id).then(function(r){
+    sb.from(EXTRAS_TABLE).update({
+      routines:extras.routines, goals:extras.goals,
+      routine_imgs:extras.routine_imgs||[], updated_at:extras.updated_at
+    }).eq("id", extras.id).then(function(r){
         if(r.error) toast("Speichern fehlgeschlagen – bitte Internetverbindung prüfen.", true);
       });
   }
@@ -1033,14 +1042,21 @@
       });
     }
 
-    /* Routine-Visionsbild */
+    /* Routine-Visionsbilder: tägliche Rotation */
     var banner = document.getElementById("routineBanner");
-    if(extras.routine_img){
-      visionUrl(extras.routine_img, function(u){ if(u){ banner.src = u; banner.hidden = false; } });
+    var imgs = extras.routine_imgs || [];
+    if(imgs.length){
+      var jetzt = new Date();
+      var tagIdx = Math.floor((jetzt - new Date(jetzt.getFullYear(),0,0)) / 86400000);
+      var heutePath = imgs[tagIdx % imgs.length];
+      banner.setAttribute("data-path", heutePath);
+      visionUrl(heutePath, function(u){ if(u){ banner.src = u; banner.hidden = false; } });
       document.getElementById("routineImgDel").hidden = false;
-      document.getElementById("routineImgBtn").textContent = "Visionsbild ändern";
+      document.getElementById("routineImgDel").textContent = "heutiges Bild entfernen";
+      document.getElementById("routineImgBtn").textContent =
+        "Bild hinzufügen ("+imgs.length+" in der Rotation · wechselt täglich)";
     }else{
-      banner.hidden = true; banner.removeAttribute("src");
+      banner.hidden = true; banner.removeAttribute("src"); banner.removeAttribute("data-path");
       document.getElementById("routineImgDel").hidden = true;
       document.getElementById("routineImgBtn").textContent = "Visionsbild wählen";
     }

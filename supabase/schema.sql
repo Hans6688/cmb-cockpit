@@ -49,8 +49,12 @@ create table if not exists public.cockpit_extras (
   user_id     uuid not null unique default auth.uid() references auth.users(id) on delete cascade,
   routines    jsonb not null default '[]'::jsonb,
   goals       jsonb not null default '[]'::jsonb,
+  routine_imgs jsonb not null default '[]'::jsonb,
   updated_at  timestamptz not null default now()
 );
+
+alter table public.cockpit_extras
+  add column if not exists routine_imgs jsonb not null default '[]'::jsonb;
 
 alter table public.cockpit_extras enable row level security;
 

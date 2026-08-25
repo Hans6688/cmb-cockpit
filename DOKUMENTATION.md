@@ -106,7 +106,9 @@ Kompakte Buttons mit Stand-Anzeige, die Karten erst auf Klick ausklappen
   **Vision-Board:** Über „Bild“ bekommt ein Ziel ein eigenes Foto; Ziele mit Bild
   erscheinen oben in der Karte als Bild-Mosaik mit dem Zieltext über dem Foto.
   Ein Klick öffnet das Bild bildschirmfüllend mit dem Ziel als Leitsatz.
-  Die Tagesroutine-Karte kann zusätzlich ein „Visionsbild“ als Kopfbild tragen.
+  Die Tagesroutine-Karte trägt zusätzlich eine **Visionsbild-Rotation**: mehrere
+  Bilder (eigene Fotos oder generierte Motive, Spalte `routine_imgs`), von denen
+  **jeden Tag automatisch ein anderes** als Kopfbild erscheint.
   Bilder werden beim Hochladen automatisch verkleinert und liegen **privat** im
   Supabase-Storage-Bucket `cockpit-vision` (nur nach Login über kurzlebige,
   signierte Links abrufbar; Zugriffsregeln pro Nutzerordner).
@@ -265,3 +267,4 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 25.08.2026 | [`AGENTS.md`](AGENTS.md) und [`CLAUDE.md`](CLAUDE.md) angelegt: Briefing und Arbeitsregeln, damit jeder KI-Assistent (auch ohne diese Gesprächshistorie) sofort weiterarbeiten kann. |
 | 25.08.2026 | Abschnitt **„KI & Repository“** in der Detailansicht: Repository- und Claude-Chat-Link pro Projekt speicherbar; Knopf „Mit Claude besprechen“ startet einen neuen Claude-Chat mit automatisch übergebenem Projektkontext. |
 | 25.08.2026 | **Vision-Board**: Bilder pro Ziel (Mosaik + Vollbild-Ansicht mit Leitsatz) und Visionsbild für die Tagesroutine; privater Storage-Bucket `cockpit-vision` mit nutzerbezogenen Zugriffsregeln. |
+| 25.08.2026 | Tagesroutine: **Visionsbild-Rotation** – mehrere Bilder (`routine_imgs`), täglich wechselndes Kopfbild; Verwaltung über „Bild hinzufügen“ / „heutiges Bild entfernen“. |
