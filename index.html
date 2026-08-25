@@ -197,6 +197,8 @@
   .rrow.done > span{color:var(--ink-soft); text-decoration:line-through}
   .rrow .del{border:0; background:none; color:var(--ink-soft); font-size:16px; padding:2px 6px; border-radius:8px; opacity:.55; cursor:pointer}
   .rrow .del:hover{opacity:1; color:var(--pill-wait-fg)}
+  .inbox-row{flex-wrap:wrap}
+  .inbox-row .assign{max-width:190px}
   .streak{font-size:11.5px; font-weight:600; background:var(--pill-review-bg); color:var(--pill-review-fg); padding:3px 9px; border-radius:99px; white-space:nowrap}
   .grid:has(.tile) .drop-hint{display:none}
   .dnd-tip{font-size:12.5px; color:var(--ink-soft); margin:-8px 0 10px}
@@ -404,6 +406,11 @@
         <span class="tg-badge" id="tgGoalsBadge"></span>
         <span class="chev" aria-hidden="true">▾</span>
       </button>
+      <button class="daily-toggle" id="tgInbox" aria-expanded="false">
+        <span class="dia" aria-hidden="true"></span>Eingang
+        <span class="tg-badge" id="tgInboxBadge"></span>
+        <span class="chev" aria-hidden="true">▾</span>
+      </button>
     </div>
     <div class="daily-grid">
       <div class="daily-card" id="cardRoutine" hidden>
@@ -423,6 +430,11 @@
           <input type="text" id="goalInput" placeholder="Neues Ziel … (Enter)" maxlength="200">
           <button class="btn small" id="goalAdd">Hinzufügen</button>
         </div>
+      </div>
+      <div class="daily-card" id="cardInbox" hidden>
+        <h3>Eingang</h3>
+        <p class="daily-sub">Schnelle Notizen von iPhone &amp; Mac („Ans Cockpit senden“) – einem Projekt zuordnen oder löschen</p>
+        <div id="inboxList"></div>
       </div>
     </div>
   </div>
@@ -669,7 +681,7 @@
 
   document.getElementById("btnLogout").addEventListener("click", function(){
     sb.auth.signOut().then(function(){
-      data = []; extras = null;
+      data = []; extras = null; inbox = [];
       document.getElementById("daily").hidden = true;
       show("auth");
     });
@@ -689,7 +701,7 @@
 
   sb.auth.onAuthStateChange(function(event, session){
     if(event === "PASSWORD_RECOVERY"){ pwModal.classList.add("open"); return; }
-    if(session){ show("app"); loadProjects(); loadExtras(); }
+    if(session){ show("app"); loadProjects(); loadExtras(); loadInbox(); }
     else{ show("auth"); }
   });
 
@@ -880,16 +892,76 @@
     extras.goals.push({id:uid(), text:v, done:false});
     inp.value = ""; persistExtras(); renderDaily();
   }
-  function bindDailyToggle(btnId, cardId){
+  function bindDailyToggle(btnId, cardId, onOpen){
     var btn = document.getElementById(btnId), card = document.getElementById(cardId);
     btn.addEventListener("click", function(){
       card.hidden = !card.hidden;
       btn.classList.toggle("open", !card.hidden);
       btn.setAttribute("aria-expanded", String(!card.hidden));
+      if(!card.hidden && onOpen) onOpen();
     });
   }
   bindDailyToggle("tgRoutine", "cardRoutine");
   bindDailyToggle("tgGoals", "cardGoals");
+  bindDailyToggle("tgInbox", "cardInbox", function(){ loadInbox(); });
+
+  /* ── Eingang (schnelle Notizen per Kurzbefehl) ── */
+  var INBOX_TABLE = "cockpit_inbox";
+  var inbox = [];
+  function loadInbox(){
+    sb.from(INBOX_TABLE).select("*").order("created_at",{ascending:false}).then(function(r){
+      if(r.error){ return; }
+      inbox = r.data || [];
+      renderInbox();
+    });
+  }
+  function renderInbox(){
+    var badge = document.getElementById("tgInboxBadge");
+    badge.textContent = inbox.length ? inbox.length+" neu" : "leer";
+    badge.classList.toggle("all", false);
+    var el = document.getElementById("inboxList");
+    if(!inbox.length){
+      el.innerHTML = '<div class="empty">Nichts im Eingang. Notizen kommen per Kurzbefehl „Ans Cockpit senden“ hier an.</div>';
+      return;
+    }
+    var options = '<option value="">→ als Aufgabe zu …</option>'
+      + data.map(function(p){ return '<option value="'+p.id+'">'+esc(p.name)+'</option>'; }).join("");
+    el.innerHTML = inbox.map(function(n){
+      return '<div class="rrow inbox-row" data-id="'+n.id+'">'
+        + '<span style="flex:1; min-width:160px; white-space:pre-wrap">'+esc(n.content)+'</span>'
+        + '<small style="color:var(--ink-soft)">'+fmtDate(new Date(n.created_at).getTime())+'</small>'
+        + '<select class="status assign">'+options+'</select>'
+        + '<button class="del" aria-label="Löschen">×</button>'
+        + '</div>';
+    }).join("");
+    el.querySelectorAll(".inbox-row").forEach(function(row){
+      var id = row.getAttribute("data-id");
+      row.querySelector(".assign").addEventListener("change", function(){
+        var pid = this.value; if(!pid) return;
+        var note = inbox.filter(function(x){return x.id===id;})[0];
+        var p = null;
+        for(var i=0;i<data.length;i++){ if(data[i].id===pid) p = data[i]; }
+        if(!note || !p) return;
+        if(!p.data) p.data = emptyData();
+        p.data.todos.push({id:uid(), text:note.content, done:false, prio:"mittel", due:null});
+        persist(p);
+        sb.from(INBOX_TABLE).delete().eq("id", id).then(function(r){
+          if(r.error){ toast("Konnte nicht verschoben werden.", true); return; }
+          inbox = inbox.filter(function(x){return x.id!==id;});
+          renderInbox(); renderGrid();
+          toast('Als Aufgabe zu "'+p.name+'" verschoben.');
+        });
+      });
+      row.querySelector(".del").addEventListener("click", function(){
+        if(!confirm("Notiz löschen?")) return;
+        sb.from(INBOX_TABLE).delete().eq("id", id).then(function(r){
+          if(r.error){ toast("Löschen fehlgeschlagen.", true); return; }
+          inbox = inbox.filter(function(x){return x.id!==id;});
+          renderInbox();
+        });
+      });
+    });
+  }
 
   document.getElementById("routineAdd").addEventListener("click", addRoutine);
   document.getElementById("routineInput").addEventListener("keydown", function(e){ if(e.key==="Enter") addRoutine(); });
@@ -1382,7 +1454,7 @@
 
   /* ── Start ── */
   sb.auth.getSession().then(function(r){
-    if(r.data && r.data.session){ show("app"); loadProjects(); loadExtras(); }
+    if(r.data && r.data.session){ show("app"); loadProjects(); loadExtras(); loadInbox(); }
     else show("auth");
   });
 

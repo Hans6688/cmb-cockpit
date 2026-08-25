@@ -69,3 +69,49 @@ create policy "extras_update_own" on public.cockpit_extras
 drop policy if exists "extras_delete_own" on public.cockpit_extras;
 create policy "extras_delete_own" on public.cockpit_extras
   for delete using (auth.uid() = user_id);
+
+-- Eingang: schnelle Notizen per Apple-Kurzbefehl
+create table if not exists public.cockpit_inbox (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  content     text not null,
+  created_at  timestamptz not null default now()
+);
+
+alter table public.cockpit_inbox enable row level security;
+
+drop policy if exists "inbox_select_own" on public.cockpit_inbox;
+create policy "inbox_select_own" on public.cockpit_inbox
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "inbox_delete_own" on public.cockpit_inbox;
+create policy "inbox_delete_own" on public.cockpit_inbox
+  for delete using (auth.uid() = user_id);
+
+-- Einwurf-Funktion für den Kurzbefehl. WICHTIG: Der echte Geheimcode wird nur
+-- direkt in Supabase eingesetzt und gehört NICHT in dieses (öffentliche) Repository.
+create or replace function public.cockpit_add_note(secret text, note text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid;
+begin
+  if secret is distinct from 'HIER-GEHEIMCODE-EINSETZEN' then
+    raise exception 'not allowed';
+  end if;
+  if note is null or length(trim(note)) = 0 then
+    raise exception 'empty note';
+  end if;
+  select id into uid from auth.users where email = 'HIER-DEINE-EMAIL' limit 1;
+  if uid is null then
+    raise exception 'user not found';
+  end if;
+  insert into public.cockpit_inbox (user_id, content) values (uid, left(trim(note), 4000));
+end;
+$$;
+
+revoke all on function public.cockpit_add_note(text, text) from public;
+grant execute on function public.cockpit_add_note(text, text) to anon;
