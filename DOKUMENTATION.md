@@ -123,10 +123,11 @@ Projekte** – plus die **Warteschleife** ganz unten: ein bewusst ausgegrauter,
 standardmäßig eingeklappter Parkplatz für alles, was gerade nicht dran ist
 (Klick auf die Überschrift klappt ihn auf).
 
-**WIP-Limit:** Maximal **3 Projekte** dürfen gleichzeitig in den aktiven
-Bereichen liegen. Ein viertes lässt die App nicht zu (per Drag-and-drop,
-Bereichs-Auswahl oder Neuanlage) – erst muss ein Projekt in die Warteschleife.
-Liegt der Bestand über dem Limit, mahnt ein Hinweis-Banner über den Bereichen.
+**WIP-Limit:** Maximal **3 Projekte pro Bereich** (Sprint / CMB / Privat).
+Ein viertes im selben Bereich lässt die App nicht zu (per Drag-and-drop,
+Bereichs-Auswahl oder Neuanlage) – erst muss dort ein Projekt in die
+Warteschleife. Liegt ein Bereich über dem Limit, mahnt ein Hinweis-Banner
+über den Bereichen, das die betroffenen Bereiche benennt.
 
 **Geld-Aktionen-Zähler:** Vierte Kennzahl im Kopfbereich („Geld-Aktionen
 Woche“). Über den +-Knopf werden umsatzwirksame Handlungen erfasst – *Angebot
@@ -285,3 +286,4 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 25.08.2026 | Tagesroutine: **Visionsbild-Rotation** – mehrere Bilder (`routine_imgs`), täglich wechselndes Kopfbild; Verwaltung über „Bild hinzufügen“ / „heutiges Bild entfernen“. |
 | 25.08.2026 | **Fokus-Werkzeuge**: Wochenzähler „Geld-Aktionen“ (Angebot/Nachfassen/Rechnung/Livegang, `money_log`) und **WIP-Limit 3** mit neuem Bereich „Warteschleife“ (eingeklappt, ausgegraut); Limit wird bei Drag-and-drop, Bereichswechsel und Neuanlage durchgesetzt. |
 | 25.08.2026 | Fünfte Geld-Aktion **„Content veröffentlicht“** (Start des LinkedIn-Rhythmus Mo/Mi/Fr). |
+| 25.08.2026 | WIP-Limit angepasst: **3 pro Bereich** statt 3 insgesamt (private Kleinaufgaben blockieren so nicht das Geschäftliche). |

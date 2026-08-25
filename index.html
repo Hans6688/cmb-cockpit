@@ -807,9 +807,9 @@
     {key:"privat", label:"Private Projekte"},
     {key:"warte",  label:"Warteschleife"}
   ];
-  var WIP_LIMIT = 3;
-  function activeCount(){
-    return data.filter(function(p){ return (p.category||"cmb")!=="warte"; }).length;
+  var WIP_LIMIT = 3; /* pro Bereich */
+  function catCount(cat){
+    return data.filter(function(p){ return (p.category||"cmb")===cat; }).length;
   }
   var warteOpen = false;
   try{ warteOpen = localStorage.getItem("cockpit-warte-open")==="1"; }catch(e){}
@@ -1347,10 +1347,11 @@
       + '<span><i style="background:#4d7a5e"></i>Niedrig</span>'
       + '<span>· Farbe = dringendste offene Aufgabe · Termin in ≤ 7 Tagen stuft hoch, ≤ 3 Tagen = Hoch</span>'
       + '</div>';
-    var act = activeCount();
-    if(act > WIP_LIMIT){
-      html = '<div class="wip-warn">' + act + ' Projekte aktiv – dein Limit ist ' + WIP_LIMIT
-        + '. Zieh Projekte in die Warteschleife (ganz unten), bis nur noch ' + WIP_LIMIT + ' „vor der Nase“ sind.</div>' + html;
+    var ueber = CATEGORIES.filter(function(c){ return c.key!=="warte" && catCount(c.key) > WIP_LIMIT; });
+    if(ueber.length){
+      html = '<div class="wip-warn">Über dem Limit von ' + WIP_LIMIT + ' pro Bereich: '
+        + ueber.map(function(c){ return c.label + ' (' + catCount(c.key) + ' / ' + WIP_LIMIT + ')'; }).join(' · ')
+        + ' – zieh Projekte in die Warteschleife (ganz unten).</div>' + html;
     }
     CATEGORIES.forEach(function(cat){
       var items = data.filter(function(p){ return (p.category||"cmb")===cat.key; })
@@ -1429,19 +1430,23 @@
         neu[t.getAttribute("data-id")] = {cat:cat, order:i};
       });
     });
-    var futureActive = data.filter(function(p){
-      var n = neu[p.id];
-      return (n ? n.cat : (p.category||"cmb")) !== "warte";
-    }).length;
-    var blockiert = false;
+    var zukunft = {};
     data.forEach(function(p){
       var n = neu[p.id];
-      if(n && (p.category||"cmb")==="warte" && n.cat!=="warte" && futureActive > WIP_LIMIT){
-        delete neu[p.id]; blockiert = true; futureActive--;
+      var c = n ? n.cat : (p.category||"cmb");
+      zukunft[c] = (zukunft[c]||0) + 1;
+    });
+    var blockiert = false;
+    data.forEach(function(p){
+      var n = neu[p.id]; if(!n) return;
+      var alt = (p.category||"cmb");
+      if(n.cat!==alt && n.cat!=="warte" && zukunft[n.cat] > WIP_LIMIT){
+        delete neu[p.id]; blockiert = true;
+        zukunft[n.cat]--; zukunft[alt] = (zukunft[alt]||0) + 1;
       }
     });
     if(blockiert){
-      toast("Limit "+WIP_LIMIT+" erreicht – erst ein aktives Projekt in die Warteschleife schieben.", true);
+      toast("Limit "+WIP_LIMIT+" pro Bereich erreicht – erst dort ein Projekt in die Warteschleife schieben.", true);
     }
     var changed = [];
     data.forEach(function(p){
@@ -1521,9 +1526,9 @@
   document.getElementById("pCategory").addEventListener("change", function(){
     var p = current(); if(!p) return;
     var cat = this.value;
-    if(cat!=="warte" && (p.category||"cmb")==="warte" && activeCount() >= WIP_LIMIT){
-      toast("Limit "+WIP_LIMIT+" erreicht – erst ein aktives Projekt in die Warteschleife schieben.", true);
-      this.value = "warte";
+    if(cat!=="warte" && cat!==(p.category||"cmb") && catCount(cat) >= WIP_LIMIT){
+      toast("Limit "+WIP_LIMIT+" pro Bereich – in diesem Bereich ist kein Platz, erst dort etwas in die Warteschleife schieben.", true);
+      this.value = p.category||"cmb";
       return;
     }
     var maxOrder = -1;
@@ -1811,8 +1816,8 @@
     var name = document.getElementById("npName").value.trim();
     if(!name){ document.getElementById("npName").focus(); return; }
     var cat = document.getElementById("npCategory").value;
-    if(cat!=="warte" && activeCount() >= WIP_LIMIT){
-      toast("Limit "+WIP_LIMIT+" aktiv – lege das Projekt in der Warteschleife an oder schaffe erst Platz.", true);
+    if(cat!=="warte" && catCount(cat) >= WIP_LIMIT){
+      toast("Limit "+WIP_LIMIT+" pro Bereich erreicht – wähle einen anderen Bereich oder die Warteschleife.", true);
       return;
     }
     var maxOrder = -1;
