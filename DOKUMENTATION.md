@@ -249,3 +249,4 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 25.08.2026 | Kachel-**Teaser**: die drei dringendsten offenen Aufgaben mit Prio-Punkt und Termin direkt auf der Kachel („+ N weitere“). |
 | 25.08.2026 | **Eingang** für schnelle Notizen (`cockpit_inbox`, RPC `cockpit_add_note` mit Geheimcode); Zuordnung zu Projekten per Dropdown; **Apple-Kurzbefehl „Ans Cockpit“** gebaut, signiert, installiert und Ende-zu-Ende getestet (Siri, Teilen-Menü, iCloud-Sync). |
 | 25.08.2026 | Diese Dokumentation angelegt; wird ab jetzt bei jeder Änderung mitgepflegt. |
+| 25.08.2026 | [`AGENTS.md`](AGENTS.md) und [`CLAUDE.md`](CLAUDE.md) angelegt: Briefing und Arbeitsregeln, damit jeder KI-Assistent (auch ohne diese Gesprächshistorie) sofort weiterarbeiten kann. |
