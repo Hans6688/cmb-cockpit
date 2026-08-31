@@ -294,3 +294,4 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 25.08.2026 | WIP-Limit angepasst: **3 pro Bereich** statt 3 insgesamt (private Kleinaufgaben blockieren so nicht das Geschäftliche). |
 | 25.08.2026 | „Eingang“ in **„Notizen“** umbenannt; Notizen lassen sich jetzt auch direkt in der Karte erstellen (neue Insert-Regel `inbox_insert_own`). |
 | 31.08.2026 | Bereiche umbenannt: **Kundenprojekte** (statt Sprintprojekte) und **CMB intern** (statt Sonstige CMB-Projekte); Dauerprojekt **„CMB Marketing“** als fester Ort für Marketing-Aufgaben und -Ideen eingeführt. |
+| 31.08.2026 | **Bearbeiten überall**: Klick auf einen Text öffnet den Bearbeiten-Dialog – bei Aufgaben, Projekt-Notizen, Notizen, Zielen und Routinen; Projekte bekommen „Name/Beschreibung bearbeiten“ in der Detailansicht (neue Regel `inbox_update_own`). |

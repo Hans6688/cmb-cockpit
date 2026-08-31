@@ -359,6 +359,9 @@
 
   .empty{color:var(--ink-soft); font-size:13.5px; font-style:italic; padding:4px 2px}
 
+  .edittext{cursor:pointer}
+  .edittext:hover{text-decoration:underline dotted; text-underline-offset:3px}
+
   .modal{position:fixed; inset:0; z-index:60; display:none; place-items:center; padding:20px}
   .modal.open{display:grid}
   .modal .backdrop{position:absolute; inset:0; background:rgba(20,38,48,.5); backdrop-filter:blur(3px)}
@@ -524,6 +527,7 @@
       <div>
         <h2 id="pTitle"></h2>
         <div class="sub" id="pSub"></div>
+        <button class="imgbtn" id="btnEditProject" style="padding-left:0">Name/Beschreibung bearbeiten</button>
       </div>
       <button class="iconbtn" id="btnClose" aria-label="Schließen">×</button>
     </div>
@@ -645,6 +649,26 @@
     <div class="actions">
       <button class="btn ghost" id="npCancel">Abbrechen</button>
       <button class="btn" id="npSave">Anlegen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bearbeiten-Dialog -->
+<div class="modal" id="editModal">
+  <div class="backdrop" id="editBackdrop"></div>
+  <div class="box">
+    <h2 id="editTitle">Bearbeiten</h2>
+    <div id="editNameWrap" hidden>
+      <label for="editName">Projektname</label>
+      <input type="text" id="editName" maxlength="80">
+    </div>
+    <div>
+      <label for="editText" id="editTextLabel">Text</label>
+      <textarea class="input" id="editText"></textarea>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="editCancel">Abbrechen</button>
+      <button class="btn" id="editSave">Speichern</button>
     </div>
   </div>
 </div>
@@ -1079,7 +1103,7 @@
       var s = streakOf(rt);
       return '<div class="rrow'+(done?" done":"")+'" data-id="'+rt.id+'">'
         + '<input type="checkbox"'+(done?" checked":"")+' aria-label="Heute erledigt">'
-        + '<span>'+esc(rt.text)+'</span>'
+        + '<span class="edittext" title="Klicken zum Bearbeiten">'+esc(rt.text)+'</span>'
         + (s>=2 ? '<span class="streak">Serie '+s+'</span>' : '')
         + '<button class="del" aria-label="Löschen">×</button>'
         + '</div>';
@@ -1100,6 +1124,14 @@
         extras.routines = extras.routines.filter(function(x){return x.id!==id;});
         persistExtras(); renderDaily();
       });
+      row.querySelector(".edittext").addEventListener("click", function(){
+        var rt = extras.routines.filter(function(x){return x.id===id;})[0]; if(!rt) return;
+        openEdit({title:"Routine bearbeiten", label:"Routine", text:rt.text, cb:function(v){
+          if(!v) return;
+          var rt2 = extras.routines.filter(function(x){return x.id===id;})[0]; if(!rt2) return;
+          rt2.text = v; persistExtras(); renderDaily();
+        }});
+      });
     });
 
     var gl = document.getElementById("goalList");
@@ -1107,7 +1139,7 @@
     else gl.innerHTML = extras.goals.map(function(g){
       return '<div class="rrow'+(g.done?" done":"")+'" data-id="'+g.id+'">'
         + '<input type="checkbox"'+(g.done?" checked":"")+' aria-label="Erreicht">'
-        + '<span>'+esc(g.text)+'</span>'
+        + '<span class="edittext" title="Klicken zum Bearbeiten">'+esc(g.text)+'</span>'
         + '<button class="imgbtn gimg">'+(g.img?"Bild ändern":"Bild")+'</button>'
         + '<button class="del" aria-label="Löschen">×</button>'
         + '</div>';
@@ -1128,6 +1160,14 @@
         if(g && g.img) removeVision(g.img);
         extras.goals = extras.goals.filter(function(x){return x.id!==id;});
         persistExtras(); renderDaily();
+      });
+      row.querySelector(".edittext").addEventListener("click", function(){
+        var g = extras.goals.filter(function(x){return x.id===id;})[0]; if(!g) return;
+        openEdit({title:"Ziel bearbeiten", label:"Ziel", text:g.text, cb:function(v){
+          if(!v) return;
+          var g2 = extras.goals.filter(function(x){return x.id===id;})[0]; if(!g2) return;
+          g2.text = v; persistExtras(); renderDaily();
+        }});
       });
     });
 
@@ -1227,7 +1267,7 @@
       + data.map(function(p){ return '<option value="'+p.id+'">'+esc(p.name)+'</option>'; }).join("");
     el.innerHTML = inbox.map(function(n){
       return '<div class="rrow inbox-row" data-id="'+n.id+'">'
-        + '<span style="flex:1; min-width:160px; white-space:pre-wrap">'+esc(n.content)+'</span>'
+        + '<span class="edittext" title="Klicken zum Bearbeiten" style="flex:1; min-width:160px; white-space:pre-wrap">'+esc(n.content)+'</span>'
         + '<small style="color:var(--ink-soft)">'+fmtDate(new Date(n.created_at).getTime())+'</small>'
         + '<select class="status assign">'+options+'</select>'
         + '<button class="del" aria-label="Löschen">×</button>'
@@ -1235,6 +1275,17 @@
     }).join("");
     el.querySelectorAll(".inbox-row").forEach(function(row){
       var id = row.getAttribute("data-id");
+      row.querySelector(".edittext").addEventListener("click", function(){
+        var note = inbox.filter(function(x){return x.id===id;})[0]; if(!note) return;
+        openEdit({title:"Notiz bearbeiten", label:"Notiz", text:note.content, cb:function(v){
+          if(!v) return;
+          sb.from(INBOX_TABLE).update({content:v}).eq("id", id).then(function(r){
+            if(r.error){ toast("Änderung fehlgeschlagen: "+r.error.message, true); return; }
+            note.content = v; renderInbox();
+            toast("Notiz aktualisiert.");
+          });
+        }});
+      });
       row.querySelector(".assign").addEventListener("change", function(){
         var pid = this.value; if(!pid) return;
         var note = inbox.filter(function(x){return x.id===id;})[0];
@@ -1529,9 +1580,55 @@
   var modal = document.getElementById("modal");
   document.addEventListener("keydown", function(e){
     if(e.key==="Escape"){
-      if(modal.classList.contains("open")) closeModal();
+      if(document.getElementById("editModal").classList.contains("open")) closeEdit();
+      else if(modal.classList.contains("open")) closeModal();
       else if(panel.classList.contains("open")) closePanel();
     }
+  });
+
+  /* ── Bearbeiten-Dialog (für Aufgaben, Notizen, Ziele, Routinen, Projekte) ── */
+  var editCb = null;
+  function openEdit(opts){
+    document.getElementById("editTitle").textContent = opts.title || "Bearbeiten";
+    document.getElementById("editTextLabel").textContent = opts.label || "Text";
+    document.getElementById("editText").value = opts.text || "";
+    var nw = document.getElementById("editNameWrap");
+    if(opts.name !== undefined){ nw.hidden = false; document.getElementById("editName").value = opts.name; }
+    else { nw.hidden = true; }
+    editCb = opts.cb;
+    document.getElementById("editModal").classList.add("open");
+    document.getElementById(opts.name !== undefined ? "editName" : "editText").focus();
+  }
+  function closeEdit(){
+    document.getElementById("editModal").classList.remove("open");
+    editCb = null;
+  }
+  document.getElementById("editCancel").addEventListener("click", closeEdit);
+  document.getElementById("editBackdrop").addEventListener("click", closeEdit);
+  document.getElementById("editSave").addEventListener("click", function(){
+    if(!editCb){ closeEdit(); return; }
+    var cb = editCb;
+    var text = document.getElementById("editText").value.trim();
+    var name = document.getElementById("editNameWrap").hidden ? undefined : document.getElementById("editName").value.trim();
+    closeEdit();
+    cb(text, name);
+  });
+
+  document.getElementById("btnEditProject").addEventListener("click", function(){
+    var p = current(); if(!p) return;
+    openEdit({
+      title:"Projekt bearbeiten", label:"Kurzbeschreibung",
+      text:p.sub||"", name:p.name,
+      cb:function(text, name){
+        var p2 = current(); if(!p2) return;
+        if(name) p2.name = name;
+        p2.sub = text;
+        persist(p2);
+        document.getElementById("pTitle").textContent = p2.name;
+        document.getElementById("pSub").textContent = p2.sub||"";
+        toast("Projekt aktualisiert.");
+      }
+    });
   });
 
   document.getElementById("pStatus").addEventListener("change", function(){
@@ -1588,7 +1685,7 @@
       return '<div class="todo'+(t.done?" done":"")+'" data-id="'+t.id+'">'
         + '<input type="checkbox"'+(t.done?" checked":"")+' aria-label="Erledigt">'
         + '<button class="prio-dot '+ep+'" title="Priorität: '+ep.charAt(0).toUpperCase()+ep.slice(1)+' – klicken zum Ändern"></button>'
-        + '<span>'+esc(t.text)+'</span>'
+        + '<span class="edittext" title="Klicken zum Bearbeiten">'+esc(t.text)+'</span>'
         + dueHtml
         + '<button class="del" aria-label="Löschen">×</button>'
         + '</div>';
@@ -1609,6 +1706,14 @@
         var order = ["niedrig","mittel","hoch"];
         f.t.prio = order[(order.indexOf(f.t.prio||"mittel")+1)%3];
         persist(f.p); renderTodos();
+      });
+      row.querySelector(".edittext").addEventListener("click", function(){
+        var f = findTodo(); if(!f.t) return;
+        openEdit({title:"Aufgabe bearbeiten", label:"Aufgabe", text:f.t.text, cb:function(v){
+          if(!v) return;
+          var f2 = findTodo(); if(!f2.t) return;
+          f2.t.text = v; persist(f2.p); renderTodos();
+        }});
       });
       var dateInput = row.querySelector('input[type="date"]');
       dateInput.parentNode.addEventListener("click", function(e){
@@ -1653,7 +1758,7 @@
     var sorted = p.data.notes.slice().sort(function(a,b){return b.ts-a.ts;});
     el.innerHTML = sorted.map(function(n){
       return '<div class="note" data-id="'+n.id+'">'
-        + '<p>'+esc(n.text)+'</p>'
+        + '<p class="edittext" title="Klicken zum Bearbeiten">'+esc(n.text)+'</p>'
         + '<div class="meta"><span>'+fmtDate(n.ts)+'</span><button>löschen</button></div>'
         + '</div>';
     }).join("");
@@ -1663,6 +1768,16 @@
         var p = current();
         p.data.notes = p.data.notes.filter(function(n){return n.id!==id;});
         persist(p); renderNotes();
+      });
+      row.querySelector(".edittext").addEventListener("click", function(){
+        var p = current(); if(!p) return;
+        var n = p.data.notes.filter(function(x){return x.id===id;})[0]; if(!n) return;
+        openEdit({title:"Notiz bearbeiten", label:"Notiz", text:n.text, cb:function(v){
+          if(!v) return;
+          var p2 = current(); if(!p2) return;
+          var n2 = p2.data.notes.filter(function(x){return x.id===id;})[0]; if(!n2) return;
+          n2.text = v; persist(p2); renderNotes();
+        }});
       });
     });
   }
