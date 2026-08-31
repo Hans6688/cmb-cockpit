@@ -119,12 +119,16 @@ Kompakte Buttons mit Stand-Anzeige, die Karten erst auf Klick ausklappen
   gelöscht werden. Button-Badge: „N neu“.
 
 ### 4.3 Projektbereiche mit Kacheln
-Drei aktive Bereiche – **Sprintprojekte**, **Sonstige CMB-Projekte**, **Private
-Projekte** – plus die **Warteschleife** ganz unten: ein bewusst ausgegrauter,
+Drei aktive Bereiche – **Kundenprojekte** (alles, was Kunden zahlen),
+**CMB intern** (eigenes Unternehmen: Marketing, Produkte, Website) und
+**Privat** – plus die **Warteschleife** ganz unten: ein bewusst ausgegrauter,
 standardmäßig eingeklappter Parkplatz für alles, was gerade nicht dran ist
-(Klick auf die Überschrift klappt ihn auf).
+(Klick auf die Überschrift klappt ihn auf). Für die laufenden
+Marketing-Aktivitäten gibt es ein **Dauerprojekt „CMB Marketing“** in
+CMB intern – To-dos, Ideen-Notizen und die Verknüpfung zum
+LinkedIn-Claude-Projekt an einem Ort.
 
-**WIP-Limit:** Maximal **3 Projekte pro Bereich** (Sprint / CMB / Privat).
+**WIP-Limit:** Maximal **3 Projekte pro Bereich** (Kunden / CMB intern / Privat).
 Ein viertes im selben Bereich lässt die App nicht zu (per Drag-and-drop,
 Bereichs-Auswahl oder Neuanlage) – erst muss dort ein Projekt in die
 Warteschleife. Liegt ein Bereich über dem Limit, mahnt ein Hinweis-Banner
@@ -289,3 +293,4 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 25.08.2026 | Fünfte Geld-Aktion **„Content veröffentlicht“** (Start des LinkedIn-Rhythmus Mo/Mi/Fr). |
 | 25.08.2026 | WIP-Limit angepasst: **3 pro Bereich** statt 3 insgesamt (private Kleinaufgaben blockieren so nicht das Geschäftliche). |
 | 25.08.2026 | „Eingang“ in **„Notizen“** umbenannt; Notizen lassen sich jetzt auch direkt in der Karte erstellen (neue Insert-Regel `inbox_insert_own`). |
+| 31.08.2026 | Bereiche umbenannt: **Kundenprojekte** (statt Sprintprojekte) und **CMB intern** (statt Sonstige CMB-Projekte); Dauerprojekt **„CMB Marketing“** als fester Ort für Marketing-Aufgaben und -Ideen eingeführt. |

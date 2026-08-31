@@ -535,9 +535,9 @@
         <option value="fertig">● Fertig</option>
       </select>
       <select class="status" id="pCategory" aria-label="Bereich">
-        <option value="sprint">Sprintprojekte</option>
-        <option value="cmb">Sonstige CMB-Projekte</option>
-        <option value="privat">Private Projekte</option>
+        <option value="sprint">Kundenprojekte</option>
+        <option value="cmb">CMB intern</option>
+        <option value="privat">Privat</option>
         <option value="warte">Warteschleife</option>
       </select>
       <button class="btn danger small" id="btnDelete">Projekt löschen</button>
@@ -636,9 +636,9 @@
     <div>
       <label for="npCategory">Bereich</label>
       <select id="npCategory">
-        <option value="sprint">Sprintprojekte</option>
-        <option value="cmb">Sonstige CMB-Projekte</option>
-        <option value="privat">Private Projekte</option>
+        <option value="sprint">Kundenprojekte</option>
+        <option value="cmb">CMB intern</option>
+        <option value="privat">Privat</option>
         <option value="warte">Warteschleife</option>
       </select>
     </div>
@@ -806,9 +806,9 @@
   var loadingEl = document.getElementById("loading");
   var sections = document.getElementById("sections");
   var CATEGORIES = [
-    {key:"sprint", label:"Sprintprojekte"},
-    {key:"cmb",    label:"Sonstige CMB-Projekte"},
-    {key:"privat", label:"Private Projekte"},
+    {key:"sprint", label:"Kundenprojekte"},
+    {key:"cmb",    label:"CMB intern"},
+    {key:"privat", label:"Privat"},
     {key:"warte",  label:"Warteschleife"}
   ];
   var WIP_LIMIT = 3; /* pro Bereich */
