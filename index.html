@@ -72,6 +72,38 @@
   h1{font-family:var(--font-display); font-weight:400; font-size:clamp(30px,4.5vw,42px); line-height:1.1; margin:10px 0 4px; text-wrap:balance}
   .tagline{font-family:var(--font-display); font-style:italic; color:var(--ink-soft); font-size:17px; margin:0 0 28px}
 
+  /* ── Kopfbereich: Datums-Stempel & Merker ── */
+  .topzone{display:flex; justify-content:space-between; align-items:flex-start; gap:24px; flex-wrap:wrap}
+  .topzone-right{display:flex; align-items:flex-start; gap:22px; flex-wrap:wrap; justify-content:flex-end; padding-top:6px}
+  .date-wrap{text-align:center; flex:none}
+  .date-stamp{
+    width:68px; height:68px; margin:6px auto 16px; transform:rotate(45deg);
+    border:2px solid var(--ink); border-radius:20px; display:grid; place-items:center;
+    background:var(--card); box-shadow:var(--shadow);
+  }
+  .ds-in{transform:rotate(-45deg); text-align:center; line-height:1.05}
+  .ds-in b{font-family:var(--font-display); font-size:26px; font-weight:400; display:block; font-variant-numeric:tabular-nums}
+  .ds-in span{font-size:9.5px; font-weight:700; letter-spacing:.2em; color:var(--pill-wait-fg)}
+  .date-wrap small{display:block; font-size:11.5px; color:var(--ink-soft); white-space:nowrap}
+  .headwidgets{display:flex; gap:10px; flex-wrap:wrap; align-items:stretch; justify-content:flex-end; max-width:480px}
+  .hw-chip{
+    border:0; background:var(--card); border-radius:14px; box-shadow:var(--shadow);
+    padding:10px 14px; text-align:left; cursor:pointer; min-width:110px;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .hw-chip:hover{transform:translateY(-1px); box-shadow:var(--shadow-lift)}
+  .hw-chip b{display:block; font-size:13px; line-height:1.25}
+  .hw-count{display:block; font-size:12px; font-weight:600; color:var(--ink-soft); margin-top:2px}
+  .hw-count.soon{color:var(--pill-wait-fg)}
+  .hw-chip small{display:block; font-size:11px; color:var(--ink-soft); margin-top:1px}
+  .hw-chip.past{opacity:.55}
+  .hw-add{
+    border:2px dashed var(--line); background:none; border-radius:14px; padding:10px 14px;
+    color:var(--ink-soft); cursor:pointer; font-size:13px; align-self:stretch;
+  }
+  .hw-add:hover{border-color:var(--orange); color:var(--orange)}
+  @media (max-width:760px){ .topzone-right{justify-content:flex-start} .headwidgets{justify-content:flex-start} }
+
   .topbar{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:20px}
   .stats{display:flex; gap:26px; flex-wrap:wrap}
   .stat b{display:block; font-family:var(--font-display); font-size:28px; font-weight:400; line-height:1; font-variant-numeric:tabular-nums}
@@ -433,8 +465,19 @@
     <div class="brandline">CMB Digital · Projekt-Cockpit</div>
     <button class="btn ghost small" id="btnLogout">Abmelden</button>
   </header>
-  <h1>Guten Tag, Hans-Jörg.</h1>
-  <p class="tagline">Klar denken, besser handeln.</p>
+  <div class="topzone">
+    <div class="topzone-left">
+      <h1>Guten Tag, Hans-Jörg.</h1>
+      <p class="tagline">Klar denken, besser handeln.</p>
+    </div>
+    <div class="topzone-right">
+      <div class="date-wrap">
+        <div class="date-stamp"><div class="ds-in"><b id="dsDay"></b><span id="dsMon"></span></div></div>
+        <small id="dsWeek"></small>
+      </div>
+      <div class="headwidgets" id="headWidgets"></div>
+    </div>
+  </div>
 
   <div class="topbar">
     <div class="stats">
@@ -649,6 +692,27 @@
     <div class="actions">
       <button class="btn ghost" id="npCancel">Abbrechen</button>
       <button class="btn" id="npSave">Anlegen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Merker-Dialog -->
+<div class="modal" id="mkModal">
+  <div class="backdrop" id="mkBackdrop"></div>
+  <div class="box">
+    <h2 id="mkTitle">Neuer Merker</h2>
+    <div>
+      <label for="mkText">Bezeichnung</label>
+      <input type="text" id="mkText" maxlength="60" placeholder="z. B. Henrys Geburtstag, Urlaub Mallorca">
+    </div>
+    <div>
+      <label for="mkDate">Datum</label>
+      <input type="date" id="mkDate" class="datefield" style="width:100%; padding:11px 14px; border-radius:11px">
+    </div>
+    <div class="actions">
+      <button class="btn danger" id="mkDelete" hidden>Löschen</button>
+      <button class="btn ghost" id="mkCancel">Abbrechen</button>
+      <button class="btn" id="mkSave">Speichern</button>
     </div>
   </div>
 </div>
@@ -1075,14 +1139,89 @@
     sb.from(EXTRAS_TABLE).update({
       routines:extras.routines, goals:extras.goals,
       routine_imgs:extras.routine_imgs||[], money_log:extras.money_log||[],
-      updated_at:extras.updated_at
+      header_items:extras.header_items||[], updated_at:extras.updated_at
     }).eq("id", extras.id).then(function(r){
         if(r.error) toast("Speichern fehlgeschlagen – bitte Internetverbindung prüfen.", true);
       });
   }
+  /* ── Kopfbereich: Datums-Stempel & Merker ── */
+  function renderDateStamp(){
+    var d = new Date();
+    var mon = ["JAN","FEB","MÄR","APR","MAI","JUN","JUL","AUG","SEP","OKT","NOV","DEZ"];
+    document.getElementById("dsDay").textContent = d.getDate();
+    document.getElementById("dsMon").textContent = mon[d.getMonth()];
+    document.getElementById("dsWeek").textContent =
+      d.toLocaleDateString("de-DE",{weekday:"long"}) + " · " + d.getFullYear();
+  }
+  renderDateStamp();
+
+  var mkEditId = null;
+  function openMerker(item){
+    mkEditId = item ? item.id : null;
+    document.getElementById("mkTitle").textContent = item ? "Merker bearbeiten" : "Neuer Merker";
+    document.getElementById("mkText").value = item ? item.text : "";
+    document.getElementById("mkDate").value = item ? item.date : "";
+    document.getElementById("mkDelete").hidden = !item;
+    document.getElementById("mkModal").classList.add("open");
+    document.getElementById("mkText").focus();
+  }
+  function closeMerker(){ document.getElementById("mkModal").classList.remove("open"); mkEditId = null; }
+  document.getElementById("mkCancel").addEventListener("click", closeMerker);
+  document.getElementById("mkBackdrop").addEventListener("click", closeMerker);
+  document.getElementById("mkSave").addEventListener("click", function(){
+    var text = document.getElementById("mkText").value.trim();
+    var date = document.getElementById("mkDate").value;
+    if(!text || !date){ toast("Bitte Bezeichnung und Datum angeben.", true); return; }
+    if(!extras) return;
+    extras.header_items = extras.header_items || [];
+    if(mkEditId){
+      var it = extras.header_items.filter(function(x){return x.id===mkEditId;})[0];
+      if(it){ it.text = text; it.date = date; }
+    }else{
+      extras.header_items.push({id:uid(), text:text, date:date});
+    }
+    closeMerker(); persistExtras(); renderHeadWidgets();
+  });
+  document.getElementById("mkDelete").addEventListener("click", function(){
+    if(!extras || !mkEditId) return;
+    extras.header_items = (extras.header_items||[]).filter(function(x){return x.id!==mkEditId;});
+    closeMerker(); persistExtras(); renderHeadWidgets();
+  });
+
+  function renderHeadWidgets(){
+    var el = document.getElementById("headWidgets");
+    if(!extras){ el.innerHTML = ""; return; }
+    var items = (extras.header_items||[]).slice().sort(function(a,b){
+      return daysUntil(a.date) - daysUntil(b.date);
+    });
+    el.innerHTML = items.map(function(it){
+      var tage = daysUntil(it.date);
+      var cls = "", txt;
+      if(tage < 0){ txt = "vorbei"; cls = ""; }
+      else if(tage === 0){ txt = "heute!"; cls = " soon"; }
+      else if(tage === 1){ txt = "morgen"; cls = " soon"; }
+      else { txt = "in "+tage+" Tagen"; cls = tage <= 7 ? " soon" : ""; }
+      var parts = it.date.split("-");
+      var datum = parts[2]+"."+parts[1]+"."+parts[0].slice(2);
+      return '<button class="hw-chip'+(tage<0?" past":"")+'" data-id="'+it.id+'" title="Klicken zum Bearbeiten">'
+        + '<b>'+esc(it.text)+'</b>'
+        + '<span class="hw-count'+cls+'">'+txt+'</span>'
+        + '<small>'+datum+'</small>'
+        + '</button>';
+    }).join("") + '<button class="hw-add" id="hwAdd">+ Merker</button>';
+    el.querySelectorAll(".hw-chip").forEach(function(c){
+      c.addEventListener("click", function(){
+        var it = (extras.header_items||[]).filter(function(x){return x.id===c.getAttribute("data-id");})[0];
+        if(it) openMerker(it);
+      });
+    });
+    document.getElementById("hwAdd").addEventListener("click", function(){ openMerker(null); });
+  }
+
   function renderDaily(){
     if(!extras) return;
     renderMoney();
+    renderHeadWidgets();
     document.getElementById("daily").hidden = false;
     var today = dateKey(new Date());
     document.getElementById("dailyDate").textContent =
@@ -1581,6 +1720,7 @@
   document.addEventListener("keydown", function(e){
     if(e.key==="Escape"){
       if(document.getElementById("editModal").classList.contains("open")) closeEdit();
+      else if(document.getElementById("mkModal").classList.contains("open")) closeMerker();
       else if(modal.classList.contains("open")) closeModal();
       else if(panel.classList.contains("open")) closePanel();
     }

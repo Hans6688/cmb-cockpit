@@ -88,9 +88,17 @@ Ein **Dark Mode** ist eingebaut und folgt automatisch der Systemeinstellung
 ## 4. Die Elemente der Oberfläche
 
 ### 4.1 Kopfbereich
-Logo, Begrüßung, Tagline „Klar denken, besser handeln.“, drei Kennzahlen
-(Projekte gesamt, offene To-dos, aktive Projekte), Abmelden-Knopf und der Button
-**„+ Neues Projekt“**.
+Logo, Begrüßung, Tagline „Klar denken, besser handeln.“, die Kennzahlen
+(Projekte, offene To-dos, aktiv, Geld-Aktionen), Abmelden-Knopf und der Button
+**„+ Neues Projekt“**. Rechts oben außerdem:
+
+- **Datums-Stempel:** das heutige Datum als gedrehter Diamant im Logo-Stil
+  (Tag groß, Monat klein), darunter Wochentag und Jahr – immer aktuell.
+- **Merker:** frei anlegbare Countdown-Kärtchen („+ Merker“) mit Bezeichnung
+  und Datum, z. B. Geburtstage, Ferien, Urlaube oder Fristen. Sie zeigen
+  „in N Tagen“ (ab 7 Tagen vorher orange, „heute!“/„morgen“ hervorgehoben),
+  sind nach Nähe sortiert und per Klick editier- oder löschbar
+  (Spalte `header_items` in `cockpit_extras`).
 
 ### 4.2 Drei Aufklapp-Buttons: Tagesroutine · Meine Ziele · Eingang
 Kompakte Buttons mit Stand-Anzeige, die Karten erst auf Klick ausklappen
@@ -295,3 +303,4 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 25.08.2026 | „Eingang“ in **„Notizen“** umbenannt; Notizen lassen sich jetzt auch direkt in der Karte erstellen (neue Insert-Regel `inbox_insert_own`). |
 | 31.08.2026 | Bereiche umbenannt: **Kundenprojekte** (statt Sprintprojekte) und **CMB intern** (statt Sonstige CMB-Projekte); Dauerprojekt **„CMB Marketing“** als fester Ort für Marketing-Aufgaben und -Ideen eingeführt. |
 | 31.08.2026 | **Bearbeiten überall**: Klick auf einen Text öffnet den Bearbeiten-Dialog – bei Aufgaben, Projekt-Notizen, Notizen, Zielen und Routinen; Projekte bekommen „Name/Beschreibung bearbeiten“ in der Detailansicht (neue Regel `inbox_update_own`). |
+| 31.08.2026 | **Kopfbereich gestaltbar**: Datums-Stempel im Logo-Stil (immer aktuelles Datum) und frei anlegbare **Merker-Kärtchen** mit Countdown (Geburtstage, Ferien, Fristen; `header_items`). |
