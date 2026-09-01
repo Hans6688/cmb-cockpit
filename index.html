@@ -229,6 +229,17 @@
     text-align:center; color:var(--ink-soft); font-size:13.5px; font-style:italic; pointer-events:none;
   }
 
+  /* ── Schnell-Erfassung ── */
+  .capture{
+    display:flex; align-items:center; gap:12px; background:var(--card);
+    border-radius:16px; box-shadow:var(--shadow); padding:8px 8px 8px 18px; margin-bottom:16px;
+  }
+  .capture .dia{width:10px; height:10px; border-radius:3px; background:var(--grad); transform:rotate(45deg); flex:none}
+  .capture input{
+    flex:1; border:0; background:none; outline:none; font-size:14.5px; padding:8px 0; min-width:0;
+  }
+  .capture input::placeholder{color:var(--ink-soft)}
+
   /* ── Tagesroutine & Ziele ── */
   .daily-wrap{margin-bottom:30px}
   .daily-toggles{display:flex; gap:12px; flex-wrap:wrap}
@@ -499,6 +510,12 @@
       </div>
     </div>
     <button class="btn" id="btnNew">+ Neues Projekt</button>
+  </div>
+
+  <div class="capture" id="captureBar" hidden>
+    <span class="dia" aria-hidden="true"></span>
+    <input type="text" id="captureInput" placeholder="Was möchtest du festhalten?" maxlength="500">
+    <button class="btn small" id="captureSave">Festhalten</button>
   </div>
 
   <div class="daily-wrap" id="daily" hidden>
@@ -866,6 +883,7 @@
     sb.auth.signOut().then(function(){
       data = []; extras = null; inbox = [];
       document.getElementById("daily").hidden = true;
+      document.getElementById("captureBar").hidden = true;
       show("auth");
     });
   });
@@ -1223,6 +1241,7 @@
     renderMoney();
     renderHeadWidgets();
     document.getElementById("daily").hidden = false;
+    document.getElementById("captureBar").hidden = false;
     var today = dateKey(new Date());
     document.getElementById("dailyDate").textContent =
       new Date().toLocaleDateString("de-DE",{weekday:"long", day:"numeric", month:"long"});
@@ -1370,6 +1389,21 @@
   bindDailyToggle("tgRoutine", "cardRoutine");
   bindDailyToggle("tgGoals", "cardGoals");
   bindDailyToggle("tgInbox", "cardInbox", function(){ loadInbox(); });
+
+  /* Schnell-Erfassung oben: landet in den Notizen */
+  function captureNote(){
+    var inp = document.getElementById("captureInput");
+    var v = inp.value.trim(); if(!v || !uid_) return;
+    sb.from(INBOX_TABLE).insert({user_id: uid_, content: v}).select().then(function(r){
+      if(r.error){ toast("Speichern fehlgeschlagen: "+r.error.message, true); return; }
+      inp.value = "";
+      inbox.unshift(r.data[0]);
+      renderInbox();
+      toast("Festgehalten – liegt in deinen Notizen.");
+    });
+  }
+  document.getElementById("captureSave").addEventListener("click", captureNote);
+  document.getElementById("captureInput").addEventListener("keydown", function(e){ if(e.key==="Enter") captureNote(); });
 
   document.getElementById("inboxAdd").addEventListener("click", function(){
     var ta = document.getElementById("inboxInput");

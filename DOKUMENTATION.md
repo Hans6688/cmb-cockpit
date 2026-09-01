@@ -304,3 +304,4 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 31.08.2026 | Bereiche umbenannt: **Kundenprojekte** (statt Sprintprojekte) und **CMB intern** (statt Sonstige CMB-Projekte); Dauerprojekt **„CMB Marketing“** als fester Ort für Marketing-Aufgaben und -Ideen eingeführt. |
 | 31.08.2026 | **Bearbeiten überall**: Klick auf einen Text öffnet den Bearbeiten-Dialog – bei Aufgaben, Projekt-Notizen, Notizen, Zielen und Routinen; Projekte bekommen „Name/Beschreibung bearbeiten“ in der Detailansicht (neue Regel `inbox_update_own`). |
 | 31.08.2026 | **Kopfbereich gestaltbar**: Datums-Stempel im Logo-Stil (immer aktuelles Datum) und frei anlegbare **Merker-Kärtchen** mit Countdown (Geburtstage, Ferien, Fristen; `header_items`). |
+| 01.09.2026 | **Schnell-Erfassung** oben („Was möchtest du festhalten?“): Eintippen + Enter legt die Notiz direkt im Notizen-Bereich ab – Zuordnung zu Projekten wie gewohnt per Dropdown. |
