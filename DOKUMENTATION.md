@@ -98,7 +98,10 @@ Logo, Begrüßung, Tagline „Klar denken, besser handeln.“, die Kennzahlen
   und Datum, z. B. Geburtstage, Ferien, Urlaube oder Fristen. Sie zeigen
   „in N Tagen“ (ab 7 Tagen vorher orange, „heute!“/„morgen“ hervorgehoben),
   sind nach Nähe sortiert und per Klick editier- oder löschbar
-  (Spalte `header_items` in `cockpit_extras`).
+  (Spalte `header_items` in `cockpit_extras`). Jeder Merker kann optional ein
+  **kleines Bild** tragen (Foto oder generiertes Motiv, „Bild wählen“ im
+  Dialog) – es erscheint links im Kärtchen; gespeichert wird es privat im
+  Bucket `cockpit-vision` (Pfad `merker-<id>.jpg`).
 
 ### 4.2 Drei Aufklapp-Buttons: Tagesroutine · Meine Ziele · Eingang
 Kompakte Buttons mit Stand-Anzeige, die Karten erst auf Klick ausklappen
@@ -305,3 +308,4 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 31.08.2026 | **Bearbeiten überall**: Klick auf einen Text öffnet den Bearbeiten-Dialog – bei Aufgaben, Projekt-Notizen, Notizen, Zielen und Routinen; Projekte bekommen „Name/Beschreibung bearbeiten“ in der Detailansicht (neue Regel `inbox_update_own`). |
 | 31.08.2026 | **Kopfbereich gestaltbar**: Datums-Stempel im Logo-Stil (immer aktuelles Datum) und frei anlegbare **Merker-Kärtchen** mit Countdown (Geburtstage, Ferien, Fristen; `header_items`). |
 | 01.09.2026 | **Schnell-Erfassung** oben („Was möchtest du festhalten?“): Eintippen + Enter legt die Notiz direkt im Notizen-Bereich ab – Zuordnung zu Projekten wie gewohnt per Dropdown. |
+| 01.09.2026 | **Merker-Bilder**: Jeder Merker kann ein kleines Foto/Motiv tragen (links im Kärtchen, „Bild wählen“ im Dialog). |

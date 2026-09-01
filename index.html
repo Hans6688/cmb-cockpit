@@ -90,7 +90,10 @@
     border:0; background:var(--card); border-radius:14px; box-shadow:var(--shadow);
     padding:10px 14px; text-align:left; cursor:pointer; min-width:110px;
     transition:transform .15s ease, box-shadow .15s ease;
+    display:flex; align-items:center; gap:10px;
   }
+  .hw-img{width:38px; height:38px; border-radius:12px; overflow:hidden; flex:none; background:var(--line)}
+  .hw-img img{width:100%; height:100%; object-fit:cover; display:block}
   .hw-chip:hover{transform:translateY(-1px); box-shadow:var(--shadow-lift)}
   .hw-chip b{display:block; font-size:13px; line-height:1.25}
   .hw-count{display:block; font-size:12px; font-weight:600; color:var(--ink-soft); margin-top:2px}
@@ -726,6 +729,11 @@
       <label for="mkDate">Datum</label>
       <input type="date" id="mkDate" class="datefield" style="width:100%; padding:11px 14px; border-radius:11px">
     </div>
+    <div style="display:flex; align-items:center; gap:12px">
+      <img id="mkPreview" hidden alt="" style="width:44px; height:44px; border-radius:12px; object-fit:cover">
+      <button class="imgbtn" id="mkImg" style="padding-left:0">Bild wählen</button>
+      <button class="imgbtn" id="mkImgDel" hidden>Bild entfernen</button>
+    </div>
     <div class="actions">
       <button class="btn danger" id="mkDelete" hidden>Löschen</button>
       <button class="btn ghost" id="mkCancel">Abbrechen</button>
@@ -1024,6 +1032,13 @@
   document.getElementById("visionFile").addEventListener("change", function(){
     var f = this.files[0]; this.value = "";
     if(!f || !visionTarget || !uid_ || !extras) return;
+    if(visionTarget.type==="merker-pick"){
+      mkPendingFile = f; mkPendingRemove = false;
+      var prev = document.getElementById("mkPreview");
+      prev.src = URL.createObjectURL(f); prev.hidden = false;
+      document.getElementById("mkImgDel").hidden = false;
+      return;
+    }
     var path = visionTarget.type==="routine"
       ? uid_+"/routine-"+uid()+".jpg"
       : uid_+"/ziel-"+visionTarget.id+".jpg";
@@ -1173,16 +1188,33 @@
   }
   renderDateStamp();
 
-  var mkEditId = null;
+  var mkEditId = null, mkPendingFile = null, mkPendingRemove = false;
   function openMerker(item){
     mkEditId = item ? item.id : null;
+    mkPendingFile = null; mkPendingRemove = false;
     document.getElementById("mkTitle").textContent = item ? "Merker bearbeiten" : "Neuer Merker";
     document.getElementById("mkText").value = item ? item.text : "";
     document.getElementById("mkDate").value = item ? item.date : "";
     document.getElementById("mkDelete").hidden = !item;
+    var prev = document.getElementById("mkPreview");
+    prev.hidden = true; prev.removeAttribute("src");
+    document.getElementById("mkImgDel").hidden = !(item && item.img);
+    if(item && item.img){
+      visionUrl(item.img, function(u){ if(u){ prev.src = u; prev.hidden = false; } });
+    }
     document.getElementById("mkModal").classList.add("open");
     document.getElementById("mkText").focus();
   }
+  document.getElementById("mkImg").addEventListener("click", function(){
+    visionTarget = {type:"merker-pick"};
+    document.getElementById("visionFile").click();
+  });
+  document.getElementById("mkImgDel").addEventListener("click", function(){
+    mkPendingRemove = true; mkPendingFile = null;
+    var prev = document.getElementById("mkPreview");
+    prev.hidden = true; prev.removeAttribute("src");
+    this.hidden = true;
+  });
   function closeMerker(){ document.getElementById("mkModal").classList.remove("open"); mkEditId = null; }
   document.getElementById("mkCancel").addEventListener("click", closeMerker);
   document.getElementById("mkBackdrop").addEventListener("click", closeMerker);
@@ -1192,16 +1224,32 @@
     if(!text || !date){ toast("Bitte Bezeichnung und Datum angeben.", true); return; }
     if(!extras) return;
     extras.header_items = extras.header_items || [];
+    var it;
     if(mkEditId){
-      var it = extras.header_items.filter(function(x){return x.id===mkEditId;})[0];
+      it = extras.header_items.filter(function(x){return x.id===mkEditId;})[0];
       if(it){ it.text = text; it.date = date; }
     }else{
-      extras.header_items.push({id:uid(), text:text, date:date});
+      it = {id:uid(), text:text, date:date};
+      extras.header_items.push(it);
     }
+    if(it && mkPendingRemove && it.img){ removeVision(it.img); it.img = null; }
+    var datei = mkPendingFile, ziel = it;
     closeMerker(); persistExtras(); renderHeadWidgets();
+    if(ziel && datei){
+      var pfad = uid_+"/merker-"+ziel.id+".jpg";
+      toast("Bild wird hochgeladen …");
+      uploadVision(datei, pfad, function(ok){
+        if(!ok) return;
+        ziel.img = pfad;
+        persistExtras(); renderHeadWidgets();
+        toast("Bild gespeichert.");
+      });
+    }
   });
   document.getElementById("mkDelete").addEventListener("click", function(){
     if(!extras || !mkEditId) return;
+    var it = (extras.header_items||[]).filter(function(x){return x.id===mkEditId;})[0];
+    if(it && it.img) removeVision(it.img);
     extras.header_items = (extras.header_items||[]).filter(function(x){return x.id!==mkEditId;});
     closeMerker(); persistExtras(); renderHeadWidgets();
   });
@@ -1222,11 +1270,17 @@
       var parts = it.date.split("-");
       var datum = parts[2]+"."+parts[1]+"."+parts[0].slice(2);
       return '<button class="hw-chip'+(tage<0?" past":"")+'" data-id="'+it.id+'" title="Klicken zum Bearbeiten">'
+        + (it.img ? '<span class="hw-img" data-path="'+esc(it.img)+'"><img alt=""></span>' : '')
+        + '<span>'
         + '<b>'+esc(it.text)+'</b>'
         + '<span class="hw-count'+cls+'">'+txt+'</span>'
         + '<small>'+datum+'</small>'
+        + '</span>'
         + '</button>';
     }).join("") + '<button class="hw-add" id="hwAdd">+ Merker</button>';
+    el.querySelectorAll(".hw-img").forEach(function(w){
+      visionUrl(w.getAttribute("data-path"), function(u){ if(u) w.querySelector("img").src = u; });
+    });
     el.querySelectorAll(".hw-chip").forEach(function(c){
       c.addEventListener("click", function(){
         var it = (extras.header_items||[]).filter(function(x){return x.id===c.getAttribute("data-id");})[0];
