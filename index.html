@@ -249,10 +249,37 @@
   .tile.add .plus{font-size:30px; line-height:1; font-weight:300}
 
   /* ── Kategorien & Drag-and-drop ── */
-  .cat{margin-bottom:36px}
-  .cat-head{font-family:var(--font-display); font-weight:400; font-size:24px; margin:0 0 14px; display:flex; align-items:baseline; gap:12px}
+  .cat{
+    position:relative; margin-bottom:34px; border-radius:26px;
+    padding:26px 22px 18px;
+  }
+  .cat-sprint{background:rgba(77,122,94,.08)}
+  .cat-cmb{background:rgba(255,134,62,.07)}
+  .cat-privat{background:rgba(196,168,130,.12)}
+  .cat::before{
+    content:""; position:absolute; top:-11px; left:36px; width:112px; height:24px;
+    border-radius:3px; box-shadow:0 1px 3px rgba(30,58,72,.18); opacity:.95;
+  }
+  .cat-sprint::before{
+    transform:rotate(-2.5deg);
+    background:repeating-linear-gradient(45deg, rgba(77,122,94,.6) 0 9px, rgba(240,238,230,.8) 9px 18px);
+  }
+  .cat-cmb::before{
+    transform:rotate(2deg);
+    background:repeating-linear-gradient(45deg, rgba(255,134,62,.55) 0 9px, rgba(240,238,230,.8) 9px 18px);
+  }
+  .cat-privat::before{
+    transform:rotate(-1.5deg);
+    background:repeating-linear-gradient(45deg, rgba(196,168,130,.65) 0 9px, rgba(240,238,230,.8) 9px 18px);
+  }
+  .cat-head{font-family:var(--font-display); font-weight:400; font-size:24px; margin:0 0 16px; display:flex; align-items:baseline; gap:12px}
   .cat-head::after{content:""; flex:1; height:1px; background:var(--line)}
-  .cat-count{font-family:var(--font-body); font-size:12px; font-weight:600; color:var(--ink-soft)}
+  .cat-count{
+    font-family:var(--font-body); font-size:12px; font-weight:700; font-variant-numeric:tabular-nums;
+    background:var(--pill-active-bg); color:var(--pill-active-fg);
+    padding:3px 11px; border-radius:99px;
+  }
+  .hold-head .cat-count{background:transparent; color:var(--ink-soft); padding:0}
   .tile[draggable="true"]{cursor:grab}
   .tile.dragging{opacity:.45; box-shadow:var(--shadow-lift)}
   .grid{min-height:64px}
@@ -1749,7 +1776,7 @@
       var aktiv = alle.filter(function(p){ return !p.on_hold; });
       var hold = alle.filter(function(p){ return p.on_hold; });
       var offen = !!holdOpen[cat.key];
-      html += '<section class="cat">'
+      html += '<section class="cat cat-'+cat.key+'">'
         + '<h2 class="cat-head">'+cat.label+'<span class="cat-count">'+aktiv.length+' / '+WIP_LIMIT+'</span></h2>'
         + '<div class="grid" data-cat="'+cat.key+'" data-hold="0">'
         + aktiv.map(tileHtml).join("")
