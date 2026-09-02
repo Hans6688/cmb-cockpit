@@ -313,3 +313,4 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 01.09.2026 | **Schnell-Erfassung** oben („Was möchtest du festhalten?“): Eintippen + Enter legt die Notiz direkt im Notizen-Bereich ab – Zuordnung zu Projekten wie gewohnt per Dropdown. |
 | 01.09.2026 | **Merker-Bilder**: Jeder Merker kann ein kleines Foto/Motiv tragen (links im Kärtchen, „Bild wählen“ im Dialog). |
 | 01.09.2026 | **Motiv-Bibliothek**: 12 einheitliche Illustrationen im Marken-Stil zum Antippen im Merker-Dialog (mit Magnific generiert); eigenes Foto weiterhin möglich. |
+| 01.09.2026 | **Sticker-Look für Merker** (nach Vorlage): Bilder groß und frei stehend (74 px, leicht gedreht, weicher Schatten) statt in weißen Kärtchen; eigene Fotos im Polaroid-Rahmen; ohne gewähltes Motiv erscheint automatisch die Kalender-Illustration; Datums-Stempel größer und als reine Kontur. |
