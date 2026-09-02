@@ -94,6 +94,14 @@
   }
   .hw-img{width:38px; height:38px; border-radius:12px; overflow:hidden; flex:none; background:var(--line)}
   .hw-img img{width:100%; height:100%; object-fit:cover; display:block}
+  .mk-lib{display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; margin-top:4px}
+  .mk-lib button{
+    border:2px solid transparent; border-radius:12px; padding:0; overflow:hidden;
+    aspect-ratio:1; background:var(--card-soft); cursor:pointer;
+  }
+  .mk-lib button img{width:100%; height:100%; object-fit:cover; display:block}
+  .mk-lib button.sel{border-color:var(--orange)}
+  .mk-lib button:hover{border-color:var(--sand)}
   .hw-chip:hover{transform:translateY(-1px); box-shadow:var(--shadow-lift)}
   .hw-chip b{display:block; font-size:13px; line-height:1.25}
   .hw-count{display:block; font-size:12px; font-weight:600; color:var(--ink-soft); margin-top:2px}
@@ -729,9 +737,13 @@
       <label for="mkDate">Datum</label>
       <input type="date" id="mkDate" class="datefield" style="width:100%; padding:11px 14px; border-radius:11px">
     </div>
+    <div>
+      <label>Motiv (antippen)</label>
+      <div class="mk-lib" id="mkLib"></div>
+    </div>
     <div style="display:flex; align-items:center; gap:12px">
       <img id="mkPreview" hidden alt="" style="width:44px; height:44px; border-radius:12px; object-fit:cover">
-      <button class="imgbtn" id="mkImg" style="padding-left:0">Bild wählen</button>
+      <button class="imgbtn" id="mkImg" style="padding-left:0">Eigenes Foto wählen</button>
       <button class="imgbtn" id="mkImgDel" hidden>Bild entfernen</button>
     </div>
     <div class="actions">
@@ -1026,14 +1038,16 @@
     img.src = objUrl;
   }
   function removeVision(path){
-    if(path) sb.storage.from(VISION_BUCKET).remove([path]);
+    /* Bibliotheks-Motive (lib-*) werden geteilt genutzt und nie gelöscht */
+    if(path && path.indexOf("/lib-") === -1) sb.storage.from(VISION_BUCKET).remove([path]);
   }
   var visionTarget = null; // {type:"routine"} | {type:"goal", id:...}
   document.getElementById("visionFile").addEventListener("change", function(){
     var f = this.files[0]; this.value = "";
     if(!f || !visionTarget || !uid_ || !extras) return;
     if(visionTarget.type==="merker-pick"){
-      mkPendingFile = f; mkPendingRemove = false;
+      mkPendingFile = f; mkPendingRemove = false; mkPendingLib = null;
+      document.querySelectorAll("#mkLib button").forEach(function(x){ x.classList.remove("sel"); });
       var prev = document.getElementById("mkPreview");
       prev.src = URL.createObjectURL(f); prev.hidden = false;
       document.getElementById("mkImgDel").hidden = false;
@@ -1188,10 +1202,38 @@
   }
   renderDateStamp();
 
-  var mkEditId = null, mkPendingFile = null, mkPendingRemove = false;
+  var MERKER_LIB = [
+    {k:"geburtstag", n:"Geburtstag"}, {k:"koffer", n:"Urlaub"}, {k:"ferien", n:"Ferien/Meer"},
+    {k:"flug", n:"Flug/Reise"}, {k:"termin", n:"Wichtiger Termin"}, {k:"frist", n:"Frist"},
+    {k:"padel", n:"Padel/Sport"}, {k:"kinder", n:"Kinder/Familie"}, {k:"vertrag", n:"Vertrag/Unterschrift"},
+    {k:"rechnung", n:"Rechnung/Geld"}, {k:"auto", n:"Auto"}, {k:"blumen", n:"Jahrestag/Blumen"}
+  ];
+  var mkEditId = null, mkPendingFile = null, mkPendingRemove = false, mkPendingLib = null;
+  function renderMkLib(selectedPath){
+    var el = document.getElementById("mkLib");
+    if(!uid_){ el.innerHTML = ""; return; }
+    el.innerHTML = MERKER_LIB.map(function(m){
+      var pfad = uid_+"/lib-"+m.k+".jpg";
+      return '<button type="button" data-path="'+pfad+'" title="'+m.n+'"'
+        + (selectedPath===pfad ? ' class="sel"' : '') + '><img alt="'+m.n+'"></button>';
+    }).join("");
+    el.querySelectorAll("button").forEach(function(b){
+      visionUrl(b.getAttribute("data-path"), function(u){ if(u) b.querySelector("img").src = u; });
+      b.addEventListener("click", function(){
+        el.querySelectorAll("button").forEach(function(x){ x.classList.remove("sel"); });
+        b.classList.add("sel");
+        mkPendingLib = b.getAttribute("data-path");
+        mkPendingFile = null; mkPendingRemove = false;
+        var prev = document.getElementById("mkPreview");
+        visionUrl(mkPendingLib, function(u){ if(u){ prev.src = u; prev.hidden = false; } });
+        document.getElementById("mkImgDel").hidden = false;
+      });
+    });
+  }
   function openMerker(item){
     mkEditId = item ? item.id : null;
-    mkPendingFile = null; mkPendingRemove = false;
+    mkPendingFile = null; mkPendingRemove = false; mkPendingLib = null;
+    renderMkLib(item ? item.img : null);
     document.getElementById("mkTitle").textContent = item ? "Merker bearbeiten" : "Neuer Merker";
     document.getElementById("mkText").value = item ? item.text : "";
     document.getElementById("mkDate").value = item ? item.date : "";
@@ -1210,7 +1252,8 @@
     document.getElementById("visionFile").click();
   });
   document.getElementById("mkImgDel").addEventListener("click", function(){
-    mkPendingRemove = true; mkPendingFile = null;
+    mkPendingRemove = true; mkPendingFile = null; mkPendingLib = null;
+    document.querySelectorAll("#mkLib button").forEach(function(x){ x.classList.remove("sel"); });
     var prev = document.getElementById("mkPreview");
     prev.hidden = true; prev.removeAttribute("src");
     this.hidden = true;
@@ -1233,6 +1276,7 @@
       extras.header_items.push(it);
     }
     if(it && mkPendingRemove && it.img){ removeVision(it.img); it.img = null; }
+    if(it && mkPendingLib){ if(it.img && it.img !== mkPendingLib) removeVision(it.img); it.img = mkPendingLib; }
     var datei = mkPendingFile, ziel = it;
     closeMerker(); persistExtras(); renderHeadWidgets();
     if(ziel && datei){

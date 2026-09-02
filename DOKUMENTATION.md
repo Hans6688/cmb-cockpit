@@ -99,9 +99,12 @@ Logo, Begrüßung, Tagline „Klar denken, besser handeln.“, die Kennzahlen
   „in N Tagen“ (ab 7 Tagen vorher orange, „heute!“/„morgen“ hervorgehoben),
   sind nach Nähe sortiert und per Klick editier- oder löschbar
   (Spalte `header_items` in `cockpit_extras`). Jeder Merker kann optional ein
-  **kleines Bild** tragen (Foto oder generiertes Motiv, „Bild wählen“ im
-  Dialog) – es erscheint links im Kärtchen; gespeichert wird es privat im
-  Bucket `cockpit-vision` (Pfad `merker-<id>.jpg`).
+  **kleines Bild** tragen – entweder aus der eingebauten **Motiv-Bibliothek**
+  (12 einheitliche Illustrationen im Marken-Stil: Geburtstag, Urlaub, Ferien,
+  Flug, Termin, Frist, Padel, Kinder, Vertrag, Rechnung, Auto, Blumen –
+  einmalig mit Magnific generiert, Pfade `lib-<key>.jpg`) oder als eigenes
+  Foto („Eigenes Foto wählen“, Pfad `merker-<id>.jpg`). Bibliotheks-Motive
+  werden geteilt genutzt und beim Löschen eines Merkers nie mitgelöscht.
 
 ### 4.2 Drei Aufklapp-Buttons: Tagesroutine · Meine Ziele · Eingang
 Kompakte Buttons mit Stand-Anzeige, die Karten erst auf Klick ausklappen
@@ -309,3 +312,4 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 31.08.2026 | **Kopfbereich gestaltbar**: Datums-Stempel im Logo-Stil (immer aktuelles Datum) und frei anlegbare **Merker-Kärtchen** mit Countdown (Geburtstage, Ferien, Fristen; `header_items`). |
 | 01.09.2026 | **Schnell-Erfassung** oben („Was möchtest du festhalten?“): Eintippen + Enter legt die Notiz direkt im Notizen-Bereich ab – Zuordnung zu Projekten wie gewohnt per Dropdown. |
 | 01.09.2026 | **Merker-Bilder**: Jeder Merker kann ein kleines Foto/Motiv tragen (links im Kärtchen, „Bild wählen“ im Dialog). |
+| 01.09.2026 | **Motiv-Bibliothek**: 12 einheitliche Illustrationen im Marken-Stil zum Antippen im Merker-Dialog (mit Magnific generiert); eigenes Foto weiterhin möglich. |
