@@ -154,13 +154,19 @@
     background:var(--pill-wait-bg); color:var(--pill-wait-fg); padding:12px 16px;
     border-radius:14px; font-size:13.5px; font-weight:600; margin-bottom:18px;
   }
-  .cat-warte .cat-head{cursor:pointer; color:var(--ink-soft); font-size:20px}
-  .cat-warte .cat-head:hover{color:var(--ink)}
-  .cat-warte .chev{font-size:12px; color:var(--ink-soft); transition:transform .2s ease}
-  .cat-warte.open .chev{transform:rotate(180deg)}
-  .warte-grid.collapsed .tile{display:none}
-  .warte-grid .tile{opacity:.6; filter:saturate(.5)}
-  .warte-grid .tile:hover{opacity:1; filter:none}
+  .hold-head{
+    display:flex; align-items:center; gap:10px; margin:16px 0 10px; cursor:pointer;
+    font-size:11.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-soft);
+  }
+  .hold-head:hover{color:var(--ink)}
+  .hold-head::after{content:""; flex:1; height:1px; background:var(--line)}
+  .hold-head .chev{font-size:11px; transition:transform .2s ease}
+  .hold-head.open .chev{transform:rotate(180deg)}
+  .hold-grid{min-height:0}
+  .hold-grid.collapsed .tile{display:none}
+  .hold-grid.collapsed .drop-hint{padding:10px; font-size:12px}
+  .hold-grid .tile{opacity:.55; filter:saturate(.5)}
+  .hold-grid .tile:hover{opacity:1; filter:none}
 
   .btn{
     border:0; border-radius:12px; padding:11px 20px; font-weight:600; font-size:14px;
@@ -637,7 +643,10 @@
         <option value="sprint">Kundenprojekte</option>
         <option value="cmb">CMB intern</option>
         <option value="privat">Privat</option>
-        <option value="warte">Warteschleife</option>
+      </select>
+      <select class="status" id="pHold" aria-label="Sichtbarkeit">
+        <option value="0">Sichtbar (aktiv)</option>
+        <option value="1">On hold</option>
       </select>
       <button class="btn danger small" id="btnDelete">Projekt löschen</button>
     </div>
@@ -738,7 +747,13 @@
         <option value="sprint">Kundenprojekte</option>
         <option value="cmb">CMB intern</option>
         <option value="privat">Privat</option>
-        <option value="warte">Warteschleife</option>
+      </select>
+    </div>
+    <div>
+      <label for="npHold">Sichtbarkeit</label>
+      <select id="npHold">
+        <option value="0">Sichtbar (aktiv)</option>
+        <option value="1">On hold</option>
       </select>
     </div>
     <div class="actions">
@@ -958,15 +973,19 @@
   var CATEGORIES = [
     {key:"sprint", label:"Kundenprojekte"},
     {key:"cmb",    label:"CMB intern"},
-    {key:"privat", label:"Privat"},
-    {key:"warte",  label:"Warteschleife"}
+    {key:"privat", label:"Privat"}
   ];
-  var WIP_LIMIT = 3; /* pro Bereich */
-  function catCount(cat){
-    return data.filter(function(p){ return (p.category||"cmb")===cat; }).length;
+  var WIP_LIMIT = 3; /* aktive Projekte pro Bereich */
+  function normCat(p){
+    var c = p.category||"cmb";
+    return c==="warte" ? "cmb" : c; /* Alt-Daten absichern */
   }
-  var warteOpen = false;
-  try{ warteOpen = localStorage.getItem("cockpit-warte-open")==="1"; }catch(e){}
+  function catCount(cat){
+    return data.filter(function(p){ return normCat(p)===cat && !p.on_hold; }).length;
+  }
+  var holdOpen = {};
+  try{ holdOpen = JSON.parse(localStorage.getItem("cockpit-hold-open")||"{}"); }catch(e){}
+  function saveHoldOpen(){ try{ localStorage.setItem("cockpit-hold-open", JSON.stringify(holdOpen)); }catch(e){} }
 
   function current(){
     for(var i=0;i<data.length;i++){ if(data[i].id===currentId) return data[i]; }
@@ -990,7 +1009,7 @@
     p.updated_at = new Date().toISOString();
     sb.from(TABLE).update({
       name:p.name, sub:p.sub, status:p.status, data:p.data,
-      category:p.category||"cmb", sort_order:p.sort_order||0,
+      category:p.category||"cmb", on_hold:!!p.on_hold, sort_order:p.sort_order||0,
       updated_at:p.updated_at
     }).eq("id", p.id).then(function(r){
         if(r.error) toast("Speichern fehlgeschlagen – bitte Internetverbindung prüfen.", true);
@@ -1711,45 +1730,47 @@
       updateStats();
       return;
     }
-    var html = '<p class="dnd-tip">Tipp: Kacheln per Ziehen ordnen oder in einen anderen Bereich verschieben.</p>'
+    var html = '<p class="dnd-tip">Tipp: Kacheln per Ziehen ordnen, in andere Bereiche verschieben – oder in die „On hold“-Zeile eines Bereichs parken.</p>'
       + '<div class="legend">'
       + '<span><i style="background:#ff4732"></i>Hoch</span>'
       + '<span><i style="background:#c4a882"></i>Mittel</span>'
       + '<span><i style="background:#4d7a5e"></i>Niedrig</span>'
       + '<span>· Farbe = dringendste offene Aufgabe · Termin in ≤ 7 Tagen stuft hoch, ≤ 3 Tagen = Hoch</span>'
       + '</div>';
-    var ueber = CATEGORIES.filter(function(c){ return c.key!=="warte" && catCount(c.key) > WIP_LIMIT; });
+    var ueber = CATEGORIES.filter(function(c){ return catCount(c.key) > WIP_LIMIT; });
     if(ueber.length){
-      html = '<div class="wip-warn">Über dem Limit von ' + WIP_LIMIT + ' pro Bereich: '
+      html = '<div class="wip-warn">Über dem Limit von ' + WIP_LIMIT + ' aktiven Projekten: '
         + ueber.map(function(c){ return c.label + ' (' + catCount(c.key) + ' / ' + WIP_LIMIT + ')'; }).join(' · ')
-        + ' – zieh Projekte in die Warteschleife (ganz unten).</div>' + html;
+        + ' – leg Projekte in diesem Bereich on hold.</div>' + html;
     }
     CATEGORIES.forEach(function(cat){
-      var items = data.filter(function(p){ return (p.category||"cmb")===cat.key; })
+      var alle = data.filter(function(p){ return normCat(p)===cat.key; })
         .sort(function(a,b){ return (a.sort_order||0)-(b.sort_order||0); });
-      if(cat.key==="warte"){
-        html += '<section class="cat cat-warte'+(warteOpen?" open":"")+'">'
-          + '<h2 class="cat-head" id="warteHead">Warteschleife<span class="cat-count">'+items.length+'</span><span class="chev">▾</span></h2>'
-          + '<div class="grid warte-grid'+(warteOpen?"":" collapsed")+'" data-cat="warte">'
-          + items.map(tileHtml).join("")
-          + '<div class="drop-hint">Hierher ziehen, was warten darf – zum Anzeigen auf „Warteschleife“ klicken</div>'
-          + '</div></section>';
-      }else{
-        html += '<section class="cat">'
-          + '<h2 class="cat-head">'+cat.label+'<span class="cat-count">'+items.length+'</span></h2>'
-          + '<div class="grid" data-cat="'+cat.key+'">'
-          + items.map(tileHtml).join("")
-          + '<div class="drop-hint">Noch leer – Kacheln hierher ziehen</div>'
-          + '</div></section>';
-      }
+      var aktiv = alle.filter(function(p){ return !p.on_hold; });
+      var hold = alle.filter(function(p){ return p.on_hold; });
+      var offen = !!holdOpen[cat.key];
+      html += '<section class="cat">'
+        + '<h2 class="cat-head">'+cat.label+'<span class="cat-count">'+aktiv.length+' / '+WIP_LIMIT+'</span></h2>'
+        + '<div class="grid" data-cat="'+cat.key+'" data-hold="0">'
+        + aktiv.map(tileHtml).join("")
+        + '<div class="drop-hint">Noch leer – Kacheln hierher ziehen</div>'
+        + '</div>'
+        + '<div class="hold-head'+(offen?" open":"")+'" data-cat="'+cat.key+'">On hold<span class="cat-count">'+hold.length+'</span><span class="chev">▾</span></div>'
+        + '<div class="grid hold-grid'+(offen?"":" collapsed")+'" data-cat="'+cat.key+'" data-hold="1">'
+        + hold.map(tileHtml).join("")
+        + '<div class="drop-hint">Hierher ziehen = on hold</div>'
+        + '</div>'
+        + '</section>';
     });
     sections.innerHTML = html;
 
-    var wh = document.getElementById("warteHead");
-    if(wh) wh.addEventListener("click", function(){
-      warteOpen = !warteOpen;
-      try{ localStorage.setItem("cockpit-warte-open", warteOpen ? "1" : "0"); }catch(e){}
-      renderGrid();
+    sections.querySelectorAll(".hold-head").forEach(function(h){
+      h.addEventListener("click", function(){
+        var k = h.getAttribute("data-cat");
+        holdOpen[k] = !holdOpen[k];
+        saveHoldOpen();
+        renderGrid();
+      });
     });
 
     sections.querySelectorAll(".tile[data-id]").forEach(function(el){
@@ -1797,39 +1818,42 @@
     var neu = {};
     sections.querySelectorAll(".grid").forEach(function(g){
       var cat = g.getAttribute("data-cat");
+      var hold = g.getAttribute("data-hold")==="1";
       g.querySelectorAll(".tile[data-id]").forEach(function(t, i){
-        neu[t.getAttribute("data-id")] = {cat:cat, order:i};
+        neu[t.getAttribute("data-id")] = {cat:cat, hold:hold, order:i};
       });
     });
+    /* Zukünftige Anzahl AKTIVER Projekte pro Bereich */
     var zukunft = {};
     data.forEach(function(p){
       var n = neu[p.id];
-      var c = n ? n.cat : (p.category||"cmb");
-      zukunft[c] = (zukunft[c]||0) + 1;
+      var c = n ? n.cat : normCat(p);
+      var h = n ? n.hold : !!p.on_hold;
+      if(!h) zukunft[c] = (zukunft[c]||0) + 1;
     });
     var blockiert = false;
     data.forEach(function(p){
       var n = neu[p.id]; if(!n) return;
-      var alt = (p.category||"cmb");
-      if(n.cat!==alt && n.cat!=="warte" && zukunft[n.cat] > WIP_LIMIT){
+      var warAktiv = !p.on_hold && normCat(p)===n.cat;
+      if(!n.hold && !warAktiv && zukunft[n.cat] > WIP_LIMIT){
         delete neu[p.id]; blockiert = true;
-        zukunft[n.cat]--; zukunft[alt] = (zukunft[alt]||0) + 1;
+        zukunft[n.cat]--;
       }
     });
     if(blockiert){
-      toast("Limit "+WIP_LIMIT+" pro Bereich erreicht – erst dort ein Projekt in die Warteschleife schieben.", true);
+      toast("Limit "+WIP_LIMIT+" aktive pro Bereich – erst dort ein Projekt on hold legen.", true);
     }
     var changed = [];
     data.forEach(function(p){
       var n = neu[p.id];
-      if(n && ((p.category||"cmb")!==n.cat || p.sort_order!==n.order)){
-        p.category = n.cat; p.sort_order = n.order;
+      if(n && (normCat(p)!==n.cat || !!p.on_hold!==n.hold || p.sort_order!==n.order)){
+        p.category = n.cat; p.on_hold = n.hold; p.sort_order = n.order;
         changed.push(p);
       }
     });
     if(!changed.length){ if(blockiert) renderGrid(); return; }
     changed.forEach(function(p){
-      sb.from(TABLE).update({category:p.category, sort_order:p.sort_order, updated_at:new Date().toISOString()})
+      sb.from(TABLE).update({category:p.category, on_hold:!!p.on_hold, sort_order:p.sort_order, updated_at:new Date().toISOString()})
         .eq("id", p.id).then(function(r){
           if(r.error) toast("Reihenfolge konnte nicht gespeichert werden.", true);
         });
@@ -1868,7 +1892,8 @@
     document.getElementById("pTitle").textContent = p.name;
     document.getElementById("pSub").textContent = p.sub||"";
     document.getElementById("pStatus").value = p.status;
-    document.getElementById("pCategory").value = p.category||"cmb";
+    document.getElementById("pCategory").value = normCat(p);
+    document.getElementById("pHold").value = p.on_hold ? "1" : "0";
     renderTodos(); renderNotes(); renderDocs(); renderTranscripts(); renderAiLinks();
     overlay.classList.add("open"); panel.classList.add("open");
     document.body.style.overflow = "hidden";
@@ -1941,21 +1966,39 @@
     p.status = this.value; persist(p);
   });
 
-  document.getElementById("pCategory").addEventListener("change", function(){
-    var p = current(); if(!p) return;
-    var cat = this.value;
-    if(cat!=="warte" && cat!==(p.category||"cmb") && catCount(cat) >= WIP_LIMIT){
-      toast("Limit "+WIP_LIMIT+" pro Bereich – in diesem Bereich ist kein Platz, erst dort etwas in die Warteschleife schieben.", true);
-      this.value = p.category||"cmb";
-      return;
-    }
+  function verschiebeProjekt(p, cat, hold){
     var maxOrder = -1;
-    data.forEach(function(x){ if((x.category||"cmb")===cat && x.sort_order>maxOrder) maxOrder = x.sort_order; });
-    p.category = cat; p.sort_order = maxOrder+1;
-    sb.from(TABLE).update({category:p.category, sort_order:p.sort_order, updated_at:new Date().toISOString()})
+    data.forEach(function(x){
+      if(normCat(x)===cat && !!x.on_hold===hold && x.sort_order>maxOrder) maxOrder = x.sort_order;
+    });
+    p.category = cat; p.on_hold = hold; p.sort_order = maxOrder+1;
+    sb.from(TABLE).update({category:cat, on_hold:hold, sort_order:p.sort_order, updated_at:new Date().toISOString()})
       .eq("id", p.id).then(function(r){
         if(r.error) toast("Speichern fehlgeschlagen – bitte Internetverbindung prüfen.", true);
       });
+  }
+
+  document.getElementById("pCategory").addEventListener("change", function(){
+    var p = current(); if(!p) return;
+    var cat = this.value;
+    if(!p.on_hold && cat!==normCat(p) && catCount(cat) >= WIP_LIMIT){
+      toast("Limit "+WIP_LIMIT+" aktive pro Bereich – dort ist kein Platz. Tipp: erst auf „On hold“ stellen, dann verschieben.", true);
+      this.value = normCat(p);
+      return;
+    }
+    verschiebeProjekt(p, cat, !!p.on_hold);
+  });
+
+  document.getElementById("pHold").addEventListener("change", function(){
+    var p = current(); if(!p) return;
+    var hold = this.value === "1";
+    if(!hold && catCount(normCat(p)) >= WIP_LIMIT){
+      toast("Limit "+WIP_LIMIT+" aktive in diesem Bereich – erst ein anderes Projekt on hold legen.", true);
+      this.value = "1";
+      return;
+    }
+    verschiebeProjekt(p, normCat(p), hold);
+    toast(hold ? "On hold gelegt." : "Wieder aktiv.");
   });
 
   document.getElementById("btnDelete").addEventListener("click", function(){
@@ -2242,6 +2285,7 @@
     document.getElementById("npName").value="";
     document.getElementById("npSub").value="";
     document.getElementById("npStatus").value="aktiv";
+    document.getElementById("npHold").value="0";
     document.getElementById("npName").focus();
   }
   function closeModal(){ modal.classList.remove("open"); }
@@ -2252,17 +2296,19 @@
     var name = document.getElementById("npName").value.trim();
     if(!name){ document.getElementById("npName").focus(); return; }
     var cat = document.getElementById("npCategory").value;
-    if(cat!=="warte" && catCount(cat) >= WIP_LIMIT){
-      toast("Limit "+WIP_LIMIT+" pro Bereich erreicht – wähle einen anderen Bereich oder die Warteschleife.", true);
+    var hold = document.getElementById("npHold").value === "1";
+    if(!hold && catCount(cat) >= WIP_LIMIT){
+      toast("Limit "+WIP_LIMIT+" aktive pro Bereich erreicht – leg das Projekt on hold an oder schaffe erst Platz.", true);
       return;
     }
     var maxOrder = -1;
-    data.forEach(function(x){ if((x.category||"cmb")===cat && x.sort_order>maxOrder) maxOrder = x.sort_order; });
+    data.forEach(function(x){ if(normCat(x)===cat && !!x.on_hold===hold && x.sort_order>maxOrder) maxOrder = x.sort_order; });
     var row = {
       name:name,
       sub:document.getElementById("npSub").value.trim(),
       status:document.getElementById("npStatus").value,
       category:cat,
+      on_hold:hold,
       sort_order:maxOrder+1,
       data:emptyData()
     };

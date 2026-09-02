@@ -133,20 +133,22 @@ Kompakte Buttons mit Stand-Anzeige, die Karten erst auf Klick ausklappen
   gelöscht werden. Button-Badge: „N neu“.
 
 ### 4.3 Projektbereiche mit Kacheln
-Drei aktive Bereiche – **Kundenprojekte** (alles, was Kunden zahlen),
-**CMB intern** (eigenes Unternehmen: Marketing, Produkte, Website) und
-**Privat** – plus die **Warteschleife** ganz unten: ein bewusst ausgegrauter,
-standardmäßig eingeklappter Parkplatz für alles, was gerade nicht dran ist
-(Klick auf die Überschrift klappt ihn auf). Für die laufenden
+Drei Bereiche – **Kundenprojekte** (alles, was Kunden zahlen), **CMB intern**
+(eigenes Unternehmen: Marketing, Produkte, Website) und **Privat**. Jeder
+Bereich zeigt oben seine **aktiven Projekte** (deutlich, maximal 3) und
+darunter seine eigene **„On hold“-Zeile**: ein ausgegrauter, standardmäßig
+eingeklappter Parkplatz für alles, was in diesem Bereich gerade nicht dran
+ist (Klick auf „On hold“ klappt auf; Spalte `on_hold`). So ist das gesamte
+Portfolio vorsortiert und trotzdem nichts „vor der Nase“. Für die laufenden
 Marketing-Aktivitäten gibt es ein **Dauerprojekt „CMB Marketing“** in
-CMB intern – To-dos, Ideen-Notizen und die Verknüpfung zum
-LinkedIn-Claude-Projekt an einem Ort.
+CMB intern.
 
-**WIP-Limit:** Maximal **3 Projekte pro Bereich** (Kunden / CMB intern / Privat).
-Ein viertes im selben Bereich lässt die App nicht zu (per Drag-and-drop,
-Bereichs-Auswahl oder Neuanlage) – erst muss dort ein Projekt in die
-Warteschleife. Liegt ein Bereich über dem Limit, mahnt ein Hinweis-Banner
-über den Bereichen, das die betroffenen Bereiche benennt.
+**WIP-Limit:** Maximal **3 aktive Projekte pro Bereich**. Ein viertes aktives
+lässt die App nicht zu (per Drag-and-drop, Sichtbarkeits-Auswahl oder
+Neuanlage) – erst muss dort ein Projekt on hold. In der Detailansicht steuert
+das Auswahlfeld **„Sichtbar (aktiv) / On hold“** den Zustand; per Drag-and-drop
+geht es ebenso (Kachel in die On-hold-Zeile ziehen). Liegt ein Bereich über
+dem Limit, mahnt ein Hinweis-Banner.
 
 **Geld-Aktionen-Zähler:** Vierte Kennzahl im Kopfbereich („Geld-Aktionen
 Woche“). Über den +-Knopf werden umsatzwirksame Handlungen erfasst – *Angebot
@@ -315,3 +317,4 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 01.09.2026 | **Motiv-Bibliothek**: 12 einheitliche Illustrationen im Marken-Stil zum Antippen im Merker-Dialog (mit Magnific generiert); eigenes Foto weiterhin möglich. |
 | 01.09.2026 | **Sticker-Look für Merker** (nach Vorlage): Bilder groß und frei stehend (74 px, leicht gedreht, weicher Schatten) statt in weißen Kärtchen; eigene Fotos im Polaroid-Rahmen; ohne gewähltes Motiv erscheint automatisch die Kalender-Illustration; Datums-Stempel größer und als reine Kontur. |
 | 02.09.2026 | **Freigestellte Sticker**: Alle 12 Bibliotheks-Motive per Magnific-Freistellung ohne Bildhintergrund (transparente PNGs, `libt-*.png`, 86 px) – echte Aufkleber-Optik wie in der Vorlage; dazu **Deko-Illustration** (Mittelmeer-Szene, `deco-header.png`) rechts im Kopfbereich und **Washi-Tape-Streifen** auf den drei Karten (Routine orange, Ziele sand, Notizen petrol). |
+| 02.09.2026 | **On hold pro Bereich statt globaler Warteschleife**: Jeder Bereich zeigt seine max. 3 aktiven Projekte deutlich und hat darunter eine eigene, eingeklappte On-hold-Zeile (Spalte `on_hold`; Steuerung per Drag-and-drop oder Auswahlfeld „Sichtbar/On hold“); die bisherigen Warteschleifen-Projekte wurden auf die passenden Bereiche verteilt. |

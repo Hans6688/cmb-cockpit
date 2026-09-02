@@ -41,7 +41,8 @@ alter table public.cockpit_projects
   add column if not exists category text not null default 'cmb',
   add column if not exists sort_order integer not null default 0,
   add column if not exists priority text not null default 'mittel',
-  add column if not exists due_date date;
+  add column if not exists due_date date,
+  add column if not exists on_hold boolean not null default false;
 
 -- Tagesroutinen & Ziele (eine Zeile pro Nutzer)
 create table if not exists public.cockpit_extras (
