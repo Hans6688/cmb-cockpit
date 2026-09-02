@@ -257,9 +257,20 @@
   .cat-cmb{background:rgba(255,134,62,.07)}
   .cat-privat{background:rgba(196,168,130,.12)}
   .cat::before{
-    content:""; position:absolute; top:-11px; left:36px; width:112px; height:24px;
-    border-radius:3px; box-shadow:0 1px 3px rgba(30,58,72,.18); opacity:.95;
+    content:""; position:absolute; top:-15px; left:34px; width:172px; height:32px;
+    border-radius:3px; box-shadow:0 2px 4px rgba(30,58,72,.18); opacity:.95;
   }
+  .cat-deco{position:absolute; pointer-events:none; filter:drop-shadow(0 6px 10px rgba(30,58,72,.2)); z-index:1}
+  .cd-hase{top:-48px; right:30px; width:106px; transform:rotate(7deg)}
+  .cd-staub{top:-26px; right:132px; width:66px; transform:rotate(-6deg); opacity:.85}
+  .cd-porsche{top:-42px; right:32px; width:120px; transform:rotate(-5deg)}
+  .cd-finca{top:-46px; right:32px; width:106px; transform:rotate(4deg)}
+  @media (max-width:700px){
+    .cat-deco{width:70px; top:-30px}
+    .cd-staub{display:none}
+  }
+  .deco-row{display:flex; justify-content:center; align-items:center; gap:48px; margin:46px 0 4px}
+  .deco-row img{width:112px; filter:drop-shadow(0 8px 12px rgba(30,58,72,.2))}
   .cat-sprint::before{
     transform:rotate(-2.5deg);
     background:repeating-linear-gradient(45deg, rgba(77,122,94,.6) 0 9px, rgba(240,238,230,.8) 9px 18px);
@@ -318,10 +329,10 @@
   .daily-grid:has(.daily-card:not([hidden])){margin-top:14px}
   .daily-card{flex:1 1 320px; background:var(--card); border-radius:20px; padding:22px; box-shadow:var(--shadow); position:relative}
   .daily-card::before{
-    content:""; position:absolute; top:-9px; left:50%; width:92px; height:20px;
+    content:""; position:absolute; top:-12px; left:50%; width:132px; height:27px;
     transform:translateX(-50%) rotate(-3deg); border-radius:3px; opacity:.9;
-    box-shadow:0 1px 3px rgba(30,58,72,.15);
-    background:repeating-linear-gradient(45deg, rgba(255,134,62,.5) 0 8px, rgba(240,238,230,.7) 8px 16px);
+    box-shadow:0 2px 4px rgba(30,58,72,.15);
+    background:repeating-linear-gradient(45deg, rgba(255,134,62,.5) 0 9px, rgba(240,238,230,.7) 9px 18px);
   }
   #cardGoals::before{transform:translateX(-50%) rotate(2deg); background:repeating-linear-gradient(45deg, rgba(196,168,130,.55) 0 8px, rgba(240,238,230,.7) 8px 16px)}
   #cardInbox::before{transform:translateX(-50%) rotate(-2deg); background:repeating-linear-gradient(45deg, rgba(44,81,99,.4) 0 8px, rgba(240,238,230,.7) 8px 16px)}
@@ -643,6 +654,11 @@
 
   <div class="loading" id="loading">Projekte werden geladen …</div>
   <div id="sections" hidden></div>
+
+  <div class="deco-row" id="decoRow" hidden>
+    <img data-deco="deco-defender" alt="" style="transform:rotate(-6deg)">
+    <img data-deco="deco-padel" alt="" style="transform:rotate(5deg); width:92px">
+  </div>
 
   <footer>CMB Digital · Trier &amp; Mallorca · <em>Klar denken, besser handeln.</em></footer>
 </div>
@@ -1776,7 +1792,13 @@
       var aktiv = alle.filter(function(p){ return !p.on_hold; });
       var hold = alle.filter(function(p){ return p.on_hold; });
       var offen = !!holdOpen[cat.key];
+      var deko = {
+        sprint: '<img class="cat-deco cd-staub" data-deco="deco-staub" alt=""><img class="cat-deco cd-hase" data-deco="deco-hase" alt="">',
+        cmb:    '<img class="cat-deco cd-porsche" data-deco="deco-porsche" alt="">',
+        privat: '<img class="cat-deco cd-finca" data-deco="deco-finca" alt="">'
+      };
       html += '<section class="cat cat-'+cat.key+'">'
+        + (deko[cat.key]||"")
         + '<h2 class="cat-head">'+cat.label+'<span class="cat-count">'+aktiv.length+' / '+WIP_LIMIT+'</span></h2>'
         + '<div class="grid" data-cat="'+cat.key+'" data-hold="0">'
         + aktiv.map(tileHtml).join("")
@@ -1790,6 +1812,14 @@
         + '</section>';
     });
     sections.innerHTML = html;
+
+    if(uid_){
+      document.querySelectorAll("img[data-deco]").forEach(function(im){
+        visionUrl(uid_+"/"+im.getAttribute("data-deco")+".png", function(u){ if(u) im.src = u; });
+      });
+      var dr = document.getElementById("decoRow");
+      if(dr) dr.hidden = false;
+    }
 
     sections.querySelectorAll(".hold-head").forEach(function(h){
       h.addEventListener("click", function(){
