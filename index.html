@@ -87,14 +87,14 @@
   .date-wrap small{display:block; font-size:11.5px; color:var(--ink-soft); white-space:nowrap}
   .headwidgets{display:flex; gap:10px; flex-wrap:wrap; align-items:stretch; justify-content:flex-end; max-width:480px}
   .hw-chip{
-    border:0; background:var(--card); border-radius:14px; box-shadow:var(--shadow);
-    padding:10px 14px; text-align:left; cursor:pointer; min-width:110px;
+    border:0; background:var(--card); border-radius:16px; box-shadow:var(--shadow);
+    padding:10px 16px 10px 10px; text-align:left; cursor:pointer; min-width:120px;
     transition:transform .15s ease, box-shadow .15s ease;
-    display:flex; align-items:center; gap:10px;
+    display:flex; align-items:center; gap:12px;
   }
-  .hw-img{width:38px; height:38px; border-radius:12px; overflow:hidden; flex:none; background:var(--line)}
+  .hw-img{width:56px; height:56px; border-radius:14px; overflow:hidden; flex:none; background:var(--line)}
   .hw-img img{width:100%; height:100%; object-fit:cover; display:block}
-  .mk-lib{display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; margin-top:4px}
+  .mk-lib{display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-top:4px}
   .mk-lib button{
     border:2px solid transparent; border-radius:12px; padding:0; overflow:hidden;
     aspect-ratio:1; background:var(--card-soft); cursor:pointer;
@@ -742,7 +742,7 @@
       <div class="mk-lib" id="mkLib"></div>
     </div>
     <div style="display:flex; align-items:center; gap:12px">
-      <img id="mkPreview" hidden alt="" style="width:44px; height:44px; border-radius:12px; object-fit:cover">
+      <img id="mkPreview" hidden alt="" style="width:64px; height:64px; border-radius:14px; object-fit:cover">
       <button class="imgbtn" id="mkImg" style="padding-left:0">Eigenes Foto wählen</button>
       <button class="imgbtn" id="mkImgDel" hidden>Bild entfernen</button>
     </div>
