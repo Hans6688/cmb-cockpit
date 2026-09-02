@@ -93,20 +93,28 @@
     display:flex; align-items:center; gap:14px;
   }
   .hw-img{
-    width:74px; height:74px; border-radius:20px; overflow:hidden; flex:none; background:var(--line);
-    box-shadow:0 8px 20px rgba(30,58,72,.2); transform:rotate(-4deg);
-    transition:transform .25s ease;
+    width:86px; height:86px; border-radius:0; overflow:visible; flex:none; background:none;
+    box-shadow:none; transform:rotate(-5deg); transition:transform .25s ease;
   }
-  .hw-chip:nth-child(even) .hw-img{transform:rotate(4deg)}
-  .hw-chip:hover .hw-img{transform:rotate(0deg) scale(1.05)}
-  .hw-img img{width:100%; height:100%; object-fit:cover; display:block}
-  .hw-img.hw-photo{border:4px solid #fff; border-radius:10px}
+  .hw-chip:nth-child(even) .hw-img{transform:rotate(5deg)}
+  .hw-chip:hover .hw-img{transform:rotate(0deg) scale(1.06)}
+  .hw-img img{width:100%; height:100%; object-fit:contain; display:block; filter:drop-shadow(0 8px 12px rgba(30,58,72,.22))}
+  .hw-img.hw-photo{
+    border:4px solid #fff; border-radius:10px; overflow:hidden; background:var(--line);
+    box-shadow:0 8px 20px rgba(30,58,72,.2);
+  }
+  .hw-img.hw-photo img{object-fit:cover; filter:none}
+  .deco-art{
+    width:130px; height:130px; object-fit:contain; flex:none; align-self:center;
+    transform:rotate(3deg); filter:drop-shadow(0 10px 16px rgba(30,58,72,.18));
+    pointer-events:none;
+  }
   .mk-lib{display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-top:4px}
   .mk-lib button{
     border:2px solid transparent; border-radius:12px; padding:0; overflow:hidden;
     aspect-ratio:1; background:var(--card-soft); cursor:pointer;
   }
-  .mk-lib button img{width:100%; height:100%; object-fit:cover; display:block}
+  .mk-lib button img{width:100%; height:100%; object-fit:contain; display:block; padding:6px; box-sizing:border-box}
   .mk-lib button.sel{border-color:var(--orange)}
   .mk-lib button:hover{border-color:var(--sand)}
   .hw-chip:hover{transform:translateY(-2px); background:var(--card)}
@@ -275,7 +283,15 @@
   .daily-toggle.open .chev{transform:rotate(180deg)}
   .daily-grid{display:flex; gap:18px; flex-wrap:wrap}
   .daily-grid:has(.daily-card:not([hidden])){margin-top:14px}
-  .daily-card{flex:1 1 320px; background:var(--card); border-radius:20px; padding:22px; box-shadow:var(--shadow)}
+  .daily-card{flex:1 1 320px; background:var(--card); border-radius:20px; padding:22px; box-shadow:var(--shadow); position:relative}
+  .daily-card::before{
+    content:""; position:absolute; top:-9px; left:50%; width:92px; height:20px;
+    transform:translateX(-50%) rotate(-3deg); border-radius:3px; opacity:.9;
+    box-shadow:0 1px 3px rgba(30,58,72,.15);
+    background:repeating-linear-gradient(45deg, rgba(255,134,62,.5) 0 8px, rgba(240,238,230,.7) 8px 16px);
+  }
+  #cardGoals::before{transform:translateX(-50%) rotate(2deg); background:repeating-linear-gradient(45deg, rgba(196,168,130,.55) 0 8px, rgba(240,238,230,.7) 8px 16px)}
+  #cardInbox::before{transform:translateX(-50%) rotate(-2deg); background:repeating-linear-gradient(45deg, rgba(44,81,99,.4) 0 8px, rgba(240,238,230,.7) 8px 16px)}
   .daily-card h3{font-family:var(--font-display); font-weight:400; font-size:22px; margin:0 0 2px; display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap}
   .daily-card h3 small{font-family:var(--font-body); font-size:12px; color:var(--ink-soft)}
   .daily-sub{font-size:12px; color:var(--ink-soft); margin:0 0 14px}
@@ -505,6 +521,7 @@
         <small id="dsWeek"></small>
       </div>
       <div class="headwidgets" id="headWidgets"></div>
+      <img id="decoArt" class="deco-art" hidden alt="">
     </div>
   </div>
 
@@ -1045,8 +1062,10 @@
     img.src = objUrl;
   }
   function removeVision(path){
-    /* Bibliotheks-Motive (lib-*) werden geteilt genutzt und nie gelöscht */
-    if(path && path.indexOf("/lib-") === -1) sb.storage.from(VISION_BUCKET).remove([path]);
+    /* Bibliotheks-Motive und Deko-Grafiken werden geteilt genutzt und nie gelöscht */
+    if(path && path.indexOf("/lib") === -1 && path.indexOf("/deco-") === -1){
+      sb.storage.from(VISION_BUCKET).remove([path]);
+    }
   }
   var visionTarget = null; // {type:"routine"} | {type:"goal", id:...}
   document.getElementById("visionFile").addEventListener("change", function(){
@@ -1220,7 +1239,7 @@
     var el = document.getElementById("mkLib");
     if(!uid_){ el.innerHTML = ""; return; }
     el.innerHTML = MERKER_LIB.map(function(m){
-      var pfad = uid_+"/lib-"+m.k+".jpg";
+      var pfad = uid_+"/libt-"+m.k+".png";
       return '<button type="button" data-path="'+pfad+'" title="'+m.n+'"'
         + (selectedPath===pfad ? ' class="sel"' : '') + '><img alt="'+m.n+'"></button>';
     }).join("");
@@ -1320,8 +1339,8 @@
       else { txt = "in "+tage+" Tagen"; cls = tage <= 7 ? " soon" : ""; }
       var parts = it.date.split("-");
       var datum = parts[2]+"."+parts[1]+"."+parts[0].slice(2);
-      var bild = it.img || (uid_ + "/lib-termin.jpg");
-      var fotoKlasse = bild.indexOf("/lib-") === -1 ? " hw-photo" : "";
+      var bild = it.img || (uid_ + "/libt-termin.png");
+      var fotoKlasse = bild.indexOf("/lib") === -1 ? " hw-photo" : "";
       return '<button class="hw-chip'+(tage<0?" past":"")+'" data-id="'+it.id+'" title="Klicken zum Bearbeiten">'
         + '<span class="hw-img'+fotoKlasse+'" data-path="'+esc(bild)+'"><img alt=""></span>'
         + '<span>'
@@ -1341,6 +1360,11 @@
       });
     });
     document.getElementById("hwAdd").addEventListener("click", function(){ openMerker(null); });
+
+    var deco = document.getElementById("decoArt");
+    if(deco && uid_ && deco.hidden){
+      visionUrl(uid_+"/deco-header.png", function(u){ if(u){ deco.src = u; deco.hidden = false; } });
+    }
   }
 
   function renderDaily(){
