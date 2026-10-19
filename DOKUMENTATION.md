@@ -2,7 +2,7 @@
 
 **Live-Adresse:** https://hans6688.github.io/cmb-cockpit/
 **Repository:** https://github.com/Hans6688/cmb-cockpit
-**Stand:** 25.08.2026
+**Stand:** 19.10.2026
 
 Diese Dokumentation beschreibt alles, was im Projekt-Cockpit gebaut wurde: was es kann,
 wie es technisch funktioniert und wo im Code die einzelnen Teile liegen. Sie wird bei
@@ -194,6 +194,28 @@ Seitliches Panel mit:
 - **Transkripte:** längere Texte (z. B. Gesprächsprotokolle) mit Titel und Datum,
   platzsparend eingeklappt, per Klick aufklappbar.
 
+### 4.5 Archiv – Abgeschlossenes verschwindet ganz
+
+Anders als „On hold“ (geparkt, aber sichtbar) nimmt das Archiv Erledigtes
+**komplett vom Dashboard** – ohne etwas zu löschen.
+
+- **Projekt archivieren:** Knopf **„Ins Archiv“** in der Detailansicht (neben
+  „Projekt löschen“). Die Kachel verschwindet sofort; das Projekt zählt nicht
+  mehr für Kennzahlen, WIP-Limit oder die Notiz-Zuordnungsliste. Gespeichert
+  wird nur ein Zeitstempel `archiv_ts` im `data`-JSON – keine neue
+  Datenbankspalte nötig.
+- **Archiv ansehen:** Sobald etwas im Archiv liegt, erscheint unten über der
+  Fußzeile der dezente Link **„Archiv ansehen (N)“**. Er öffnet einen Dialog
+  mit allen archivierten Projekten (Bereich, Archivierungsdatum, ggf. Zahl
+  noch offener Aufgaben). **„Zurückholen“** legt ein Projekt als „On hold“
+  zurück in seinen Bereich – so bleibt das 3er-Limit gewahrt.
+- **Erledigte Aufgaben archivieren:** Unter der Aufgabenliste eines Projekts
+  bietet der Knopf **„N erledigte ins Archiv“** an, alle abgehakten Aufgaben
+  aus der Liste zu nehmen (sie wandern in `todos_archiv` im `data`-JSON und
+  zählen nicht mehr in Kachel-Zähler und Fortschrittsbalken). Der kleine
+  Umschalter **„Archivierte Aufgaben (N)“** daneben zeigt sie bei Bedarf –
+  durchgestrichen, mit „zurückholen“ je Aufgabe.
+
 ---
 
 ## 5. Datenmodell (Supabase)
@@ -210,7 +232,7 @@ ausführbare Vorlage steht in [`supabase/schema.sql`](supabase/schema.sql).
 | `status` | text | `aktiv` · `abstimmung` · `wartet` · `fertig` |
 | `category` | text | Bereich: `sprint` · `cmb` · `privat` |
 | `sort_order` | integer | Position innerhalb des Bereichs (Drag-and-drop) |
-| `data` | jsonb | Inhalt: `todos` (mit `prio`, `due`), `notes`, `docs`, `transcripts` |
+| `data` | jsonb | Inhalt: `todos` (mit `prio`, `due`), `todos_archiv` (archivierte Aufgaben), `notes`, `docs`, `transcripts`, `archiv_ts` (gesetzt = Projekt liegt im Archiv) |
 | `created_at`, `updated_at` | timestamptz | Zeitstempel |
 
 *Hinweis:* Die Spalten `priority` und `due_date` auf Projektebene existieren noch
@@ -320,3 +342,4 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 02.09.2026 | **On hold pro Bereich statt globaler Warteschleife**: Jeder Bereich zeigt seine max. 3 aktiven Projekte deutlich und hat darunter eine eigene, eingeklappte On-hold-Zeile (Spalte `on_hold`; Steuerung per Drag-and-drop oder Auswahlfeld „Sichtbar/On hold“); die bisherigen Warteschleifen-Projekte wurden auf die passenden Bereiche verteilt. |
 | 02.09.2026 | **Bereichs-Optik nach Vorlage**: Jeder Bereich als sanft getönte Fläche (Kunden moos-grün, CMB intern orange, Privat sand) mit schrägem Washi-Tape an der Überschrift; Zähler als moos-grüne Pille. |
 | 02.09.2026 | **Deko-Sticker verteilt** (freigestellt, Magnific): Sprint-Kaninchen mit Staubwolke auf Kundenprojekte, schwarzer Porsche auf CMB intern, Finca am Meer auf Privat, Defender + Padel als Sticker-Reihe vor der Fußzeile (`deco-*.png`); Washi-Tapes auf Bereichen und Karten vergrößert. |
+| 19.10.2026 | **Archiv-Funktion**: Abgeschlossene Projekte („Ins Archiv“ in der Detailansicht) und erledigte Aufgaben („N erledigte ins Archiv“ unter der Aufgabenliste) verschwinden komplett vom Dashboard – nichts wird gelöscht. Zugriff über den Link „Archiv ansehen (N)“ über der Fußzeile bzw. den Umschalter „Archivierte Aufgaben“ im Projekt; „Zurückholen“ stellt Projekte als „On hold“ und Aufgaben in die Liste zurück. Technisch ohne Datenbankänderung (`archiv_ts` und `todos_archiv` im `data`-JSON); archivierte Projekte zählen nicht mehr für Kennzahlen, WIP-Limit und Notiz-Zuordnung. |

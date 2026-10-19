@@ -350,6 +350,14 @@
 
   /* ── Vision-Board ── */
   .imgbtn{border:0; background:none; color:var(--ink-soft); font-size:12px; text-decoration:underline; cursor:pointer; padding:2px 4px; white-space:nowrap}
+
+  /* Archiv */
+  .arch-row{text-align:center; margin:22px 0 0}
+  .arch-item{display:flex; gap:12px; align-items:center; padding:12px 0; border-bottom:1px solid rgba(21,45,45,.12)}
+  .arch-item:last-child{border-bottom:0}
+  .arch-item .ai-sub{font-size:12px; color:var(--ink-soft); margin-top:2px}
+  .todo-arch{margin-top:6px; opacity:.8}
+  .todo-arch .todo span{text-decoration:line-through}
   .imgbtn:hover{color:var(--ink)}
   .routine-banner{width:100%; height:110px; object-fit:cover; border-radius:14px; margin-bottom:12px; display:block; cursor:zoom-in}
   .vision-board{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-bottom:14px}
@@ -660,6 +668,8 @@
     <img data-deco="deco-padel" alt="" style="transform:rotate(5deg); width:92px">
   </div>
 
+  <div class="arch-row"><button class="imgbtn" id="btnArchOpen" hidden>Archiv ansehen</button></div>
+
   <footer>CMB Digital · Trier &amp; Mallorca · <em>Klar denken, besser handeln.</em></footer>
 </div>
 
@@ -691,6 +701,7 @@
         <option value="0">Sichtbar (aktiv)</option>
         <option value="1">On hold</option>
       </select>
+      <button class="btn ghost small" id="btnArchive">Ins Archiv</button>
       <button class="btn danger small" id="btnDelete">Projekt löschen</button>
     </div>
   </div>
@@ -709,6 +720,7 @@
         <input type="date" id="todoDue" class="datefield" aria-label="Termin (optional)">
         <button class="btn small" id="todoAdd">Hinzufügen</button>
       </div>
+      <div id="todoArchWrap"></div>
     </div>
 
     <div class="section">
@@ -837,6 +849,18 @@
 </div>
 
 <!-- Bearbeiten-Dialog -->
+<div class="modal" id="archModal">
+  <div class="backdrop" id="archBackdrop"></div>
+  <div class="box">
+    <h2>Archiv</h2>
+    <p class="daily-sub">Abgeschlossene Projekte – vom Dashboard genommen, aber nichts ist verloren. „Zurückholen“ legt ein Projekt als „On hold“ in seinen Bereich.</p>
+    <div id="archList"></div>
+    <div class="actions">
+      <button class="btn ghost" id="archClose">Schließen</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="editModal">
   <div class="backdrop" id="editBackdrop"></div>
   <div class="box">
@@ -1024,8 +1048,11 @@
     return c==="warte" ? "cmb" : c; /* Alt-Daten absichern */
   }
   function catCount(cat){
-    return data.filter(function(p){ return normCat(p)===cat && !p.on_hold; }).length;
+    return data.filter(function(p){ return normCat(p)===cat && !p.on_hold && !isArch(p); }).length;
   }
+  /* Archiv: abgeschlossene Projekte verschwinden komplett vom Dashboard */
+  function isArch(p){ return !!(p.data && p.data.archiv_ts); }
+  function sichtbare(){ return data.filter(function(p){ return !isArch(p); }); }
   var holdOpen = {};
   try{ holdOpen = JSON.parse(localStorage.getItem("cockpit-hold-open")||"{}"); }catch(e){}
   function saveHoldOpen(){ try{ localStorage.setItem("cockpit-hold-open", JSON.stringify(holdOpen)); }catch(e){} }
@@ -1630,7 +1657,7 @@
       return;
     }
     var options = '<option value="">→ als Aufgabe zu …</option>'
-      + data.map(function(p){ return '<option value="'+p.id+'">'+esc(p.name)+'</option>'; }).join("");
+      + sichtbare().map(function(p){ return '<option value="'+p.id+'">'+esc(p.name)+'</option>'; }).join("");
     el.innerHTML = inbox.map(function(n){
       return '<div class="rrow inbox-row" data-id="'+n.id+'">'
         + '<span class="edittext" title="Klicken zum Bearbeiten" style="flex:1; min-width:160px; white-space:pre-wrap">'+esc(n.content)+'</span>'
@@ -1748,9 +1775,10 @@
       + '</button>';
   }
   function updateStats(){
-    document.getElementById("statProjects").textContent = data.length;
+    var vis = sichtbare();
+    document.getElementById("statProjects").textContent = vis.length;
     var allOpen = 0, active = 0;
-    data.forEach(function(p){
+    vis.forEach(function(p){
       var d = p.data || {todos:[]};
       allOpen += (d.todos||[]).filter(function(t){return !t.done;}).length;
       if(p.status==="aktiv") active++;
@@ -1759,7 +1787,8 @@
     document.getElementById("statActive").textContent = active;
   }
   function renderGrid(){
-    if(!data.length){
+    updateArchLink();
+    if(!sichtbare().length){
       sections.innerHTML = '<div class="empty-state">'
         + '<p>Noch keine Projekte. Lege dein erstes Projekt an – oder übernimm deine aktuellen Kundenprojekte als Startpaket.</p>'
         + '<div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center">'
@@ -1787,7 +1816,7 @@
         + ' – leg Projekte in diesem Bereich on hold.</div>' + html;
     }
     CATEGORIES.forEach(function(cat){
-      var alle = data.filter(function(p){ return normCat(p)===cat.key; })
+      var alle = sichtbare().filter(function(p){ return normCat(p)===cat.key; })
         .sort(function(a,b){ return (a.sort_order||0)-(b.sort_order||0); });
       var aktiv = alle.filter(function(p){ return !p.on_hold; });
       var hold = alle.filter(function(p){ return p.on_hold; });
@@ -1883,6 +1912,7 @@
     /* Zukünftige Anzahl AKTIVER Projekte pro Bereich */
     var zukunft = {};
     data.forEach(function(p){
+      if(isArch(p)) return; /* Archivierte zählen nicht gegen das Limit */
       var n = neu[p.id];
       var c = n ? n.cat : normCat(p);
       var h = n ? n.hold : !!p.on_hold;
@@ -1951,6 +1981,7 @@
     document.getElementById("pStatus").value = p.status;
     document.getElementById("pCategory").value = normCat(p);
     document.getElementById("pHold").value = p.on_hold ? "1" : "0";
+    todoArchOpen = false;
     renderTodos(); renderNotes(); renderDocs(); renderTranscripts(); renderAiLinks();
     overlay.classList.add("open"); panel.classList.add("open");
     document.body.style.overflow = "hidden";
@@ -1967,6 +1998,7 @@
   document.addEventListener("keydown", function(e){
     if(e.key==="Escape"){
       if(document.getElementById("editModal").classList.contains("open")) closeEdit();
+      else if(document.getElementById("archModal").classList.contains("open")) closeArch();
       else if(document.getElementById("mkModal").classList.contains("open")) closeMerker();
       else if(modal.classList.contains("open")) closeModal();
       else if(panel.classList.contains("open")) closePanel();
@@ -2058,6 +2090,64 @@
     toast(hold ? "On hold gelegt." : "Wieder aktiv.");
   });
 
+  /* ── Archiv: Projekte ── */
+  document.getElementById("btnArchive").addEventListener("click", function(){
+    var p = current(); if(!p) return;
+    if(!p.data) p.data = emptyData();
+    p.data.archiv_ts = new Date().toISOString();
+    persist(p);
+    closePanel();
+    toast('"'+p.name+'" ins Archiv gelegt – unten über „Archiv ansehen“ zu finden.');
+  });
+
+  function fmtArchDay(ts){
+    try{ return new Date(ts).toLocaleDateString("de-DE"); }catch(e){ return ""; }
+  }
+  function updateArchLink(){
+    var n = data.filter(isArch).length;
+    var b = document.getElementById("btnArchOpen");
+    b.hidden = !n;
+    b.textContent = "Archiv ansehen ("+n+")";
+  }
+  function renderArch(){
+    var list = data.filter(isArch).sort(function(a,b){
+      return (b.data.archiv_ts||"") < (a.data.archiv_ts||"") ? -1 : 1;
+    });
+    var el = document.getElementById("archList");
+    if(!list.length){
+      el.innerHTML = '<div class="empty">Das Archiv ist leer.</div>';
+      return;
+    }
+    el.innerHTML = list.map(function(p){
+      var cat = CATEGORIES.filter(function(c){ return c.key===normCat(p); })[0];
+      var offenAnz = ((p.data||{}).todos||[]).filter(function(t){return !t.done;}).length;
+      return '<div class="arch-item" data-id="'+p.id+'">'
+        + '<div style="flex:1;min-width:0"><b>'+esc(p.name)+'</b>'
+        + '<div class="ai-sub">'+(cat?cat.label:"")+' · archiviert am '+fmtArchDay(p.data.archiv_ts)
+        + (offenAnz ? ' · noch '+offenAnz+' offene Aufgabe'+(offenAnz>1?'n':'') : '')
+        + '</div></div>'
+        + '<button class="btn ghost small ai-back">Zurückholen</button>'
+        + '</div>';
+    }).join("");
+    el.querySelectorAll(".arch-item").forEach(function(row){
+      row.querySelector(".ai-back").addEventListener("click", function(){
+        var p = byId(row.getAttribute("data-id")); if(!p) return;
+        delete p.data.archiv_ts;
+        p.on_hold = true; /* landet als On hold – so bleibt das 3er-Limit gewahrt */
+        persist(p);
+        renderArch(); renderGrid();
+        toast('"'+p.name+'" zurückgeholt – liegt in seinem Bereich unter „On hold“.');
+      });
+    });
+  }
+  document.getElementById("btnArchOpen").addEventListener("click", function(){
+    renderArch();
+    document.getElementById("archModal").classList.add("open");
+  });
+  function closeArch(){ document.getElementById("archModal").classList.remove("open"); }
+  document.getElementById("archClose").addEventListener("click", closeArch);
+  document.getElementById("archBackdrop").addEventListener("click", closeArch);
+
   document.getElementById("btnDelete").addEventListener("click", function(){
     var p = current(); if(!p) return;
     if(confirm('Projekt "'+p.name+'" wirklich löschen? Alle Notizen, To-dos und Transkripte gehen verloren.')){
@@ -2073,7 +2163,7 @@
   function renderTodos(){
     var p = current(); if(!p) return;
     var el = document.getElementById("todoList");
-    if(!p.data.todos.length){ el.innerHTML = '<div class="empty">Noch keine Aufgaben.</div>'; return; }
+    if(!p.data.todos.length){ el.innerHTML = '<div class="empty">Noch keine Aufgaben.</div>'; renderTodoArch(); return; }
     /* Dringendstes zuerst, Erledigtes unten */
     var sorted = p.data.todos.slice().sort(compareTodos);
     el.innerHTML = sorted.map(function(t){
@@ -2135,6 +2225,58 @@
         var p = current();
         p.data.todos = p.data.todos.filter(function(t){return t.id!==id;});
         persist(p); renderTodos();
+      });
+    });
+    renderTodoArch();
+  }
+
+  /* ── Archiv: erledigte Aufgaben ── */
+  var todoArchOpen = false;
+  function renderTodoArch(){
+    var p = current(); if(!p) return;
+    var wrap = document.getElementById("todoArchWrap");
+    var doneAnz = (p.data.todos||[]).filter(function(t){return t.done;}).length;
+    var arch = p.data.todos_archiv||[];
+    if(!doneAnz && !arch.length){ wrap.innerHTML = ""; return; }
+    var html = '<div class="addrow" style="margin-top:8px; align-items:center">';
+    if(doneAnz) html += '<button class="btn ghost small" id="todoArchBtn">'+doneAnz+' erledigte ins Archiv</button>';
+    if(arch.length) html += '<button class="imgbtn" id="todoArchToggle">Archivierte Aufgaben ('+arch.length+') '+(todoArchOpen?'▴':'▾')+'</button>';
+    html += '</div>';
+    if(todoArchOpen && arch.length){
+      html += '<div class="todo-arch">'
+        + arch.slice().reverse().map(function(t){
+            return '<div class="todo done">'
+              + '<span style="flex:1">'+esc(t.text)+'</span>'
+              + '<button class="imgbtn ta-back" data-id="'+t.id+'">zurückholen</button>'
+              + '</div>';
+          }).join("")
+        + '</div>';
+    }
+    wrap.innerHTML = html;
+    var btn = document.getElementById("todoArchBtn");
+    if(btn) btn.addEventListener("click", function(){
+      var p2 = current(); if(!p2) return;
+      var now = new Date().toISOString();
+      var erledigt = p2.data.todos.filter(function(t){return t.done;});
+      erledigt.forEach(function(t){ t.ats = now; });
+      p2.data.todos = p2.data.todos.filter(function(t){return !t.done;});
+      p2.data.todos_archiv = (p2.data.todos_archiv||[]).concat(erledigt);
+      persist(p2); renderTodos();
+      toast(erledigt.length+' Aufgabe'+(erledigt.length>1?'n':'')+' archiviert.');
+    });
+    var tg = document.getElementById("todoArchToggle");
+    if(tg) tg.addEventListener("click", function(){ todoArchOpen = !todoArchOpen; renderTodoArch(); });
+    wrap.querySelectorAll(".ta-back").forEach(function(b){
+      b.addEventListener("click", function(){
+        var p2 = current(); if(!p2) return;
+        var id = b.getAttribute("data-id");
+        var t = (p2.data.todos_archiv||[]).filter(function(x){return x.id===id;})[0];
+        if(!t) return;
+        p2.data.todos_archiv = p2.data.todos_archiv.filter(function(x){return x.id!==id;});
+        delete t.ats;
+        p2.data.todos.push(t);
+        persist(p2); renderTodos();
+        toast('Aufgabe zurückgeholt.');
       });
     });
   }
