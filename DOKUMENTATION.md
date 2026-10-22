@@ -2,7 +2,7 @@
 
 **Live-Adresse:** https://hans6688.github.io/cmb-cockpit/
 **Repository:** https://github.com/Hans6688/cmb-cockpit
-**Stand:** 19.10.2026
+**Stand:** 22.10.2026
 
 Diese Dokumentation beschreibt alles, was im Projekt-Cockpit gebaut wurde: was es kann,
 wie es technisch funktioniert und wo im Code die einzelnen Teile liegen. Sie wird bei
@@ -106,7 +106,7 @@ Logo, Begrüßung, Tagline „Klar denken, besser handeln.“, die Kennzahlen
   Foto („Eigenes Foto wählen“, Pfad `merker-<id>.jpg`). Bibliotheks-Motive
   werden geteilt genutzt und beim Löschen eines Merkers nie mitgelöscht.
 
-### 4.2 Drei Aufklapp-Buttons: Tagesroutine · Meine Ziele · Eingang
+### 4.2 Vier Aufklapp-Buttons: Tagesroutine · Meine Ziele · Notizen · Angebote
 Kompakte Buttons mit Stand-Anzeige, die Karten erst auf Klick ausklappen
 (beim Start immer eingeklappt, damit die Seite ruhig bleibt):
 
@@ -131,6 +131,18 @@ Kompakte Buttons mit Stand-Anzeige, die Karten erst auf Klick ausklappen
   Eingabefeld. Jede Notiz kann per Dropdown **„→ als Aufgabe zu …“** in ein
   Projekt verschoben (wird dort ein To-do mit Priorität Mittel) oder über ×
   gelöscht werden. Button-Badge: „N neu“.
+- **Angebote** – kleine Angebots-Verfolgung (Spalte `offers` in
+  `cockpit_extras`). Pro Angebot: Kunde/Vorhaben, optionaler **Betrag**,
+  Sendedatum (automatisch der Erfassungstag), **Status** als Pille zum
+  Durchklicken (Offen → Angenommen → Abgelehnt; nicht-offene sinken ans Ende
+  und werden ausgegraut) und ein optionaler **Nachfass-Termin** mit Countdown
+  wie bei den Aufgaben. Über der Liste steht die Summe: „3 offene Angebote ·
+  zusammen 12.400 €“. Button-Badge: Anzahl offener Angebote; sind
+  Nachfass-Termine fällig, färbt es sich um und zeigt „N nachfassen!“.
+  Texte und Beträge sind per Klick editierbar, × löscht (mit Rückfrage).
+  **Automatik:** Ein neu erfasstes Angebot zählt zugleich als Geld-Aktion
+  „Angebot gesendet“ – der Wochenzähler bucht mit, man darf das + dann nicht
+  zusätzlich drücken.
 
 ### 4.3 Projektbereiche mit Kacheln
 Drei Bereiche – **Kundenprojekte** (alles, was Kunden zahlen), **CMB intern**
@@ -342,4 +354,5 @@ Bei Verlust lässt er sich anhand von Abschnitt 5/7 und dem Geheimcode neu anleg
 | 02.09.2026 | **On hold pro Bereich statt globaler Warteschleife**: Jeder Bereich zeigt seine max. 3 aktiven Projekte deutlich und hat darunter eine eigene, eingeklappte On-hold-Zeile (Spalte `on_hold`; Steuerung per Drag-and-drop oder Auswahlfeld „Sichtbar/On hold“); die bisherigen Warteschleifen-Projekte wurden auf die passenden Bereiche verteilt. |
 | 02.09.2026 | **Bereichs-Optik nach Vorlage**: Jeder Bereich als sanft getönte Fläche (Kunden moos-grün, CMB intern orange, Privat sand) mit schrägem Washi-Tape an der Überschrift; Zähler als moos-grüne Pille. |
 | 02.09.2026 | **Deko-Sticker verteilt** (freigestellt, Magnific): Sprint-Kaninchen mit Staubwolke auf Kundenprojekte, schwarzer Porsche auf CMB intern, Finca am Meer auf Privat, Defender + Padel als Sticker-Reihe vor der Fußzeile (`deco-*.png`); Washi-Tapes auf Bereichen und Karten vergrößert. |
+| 22.10.2026 | **Angebots-Bereich**: vierter Aufklapp-Button „Angebote“ – Angebote mit Kunde/Vorhaben, optionalem Betrag, Sendedatum, Status-Pille (Offen → Angenommen → Abgelehnt) und Nachfass-Termin mit Countdown; Summenzeile über der Liste, Badge warnt bei fälligem Nachfassen; neues Angebot zählt automatisch als Geld-Aktion „Angebot gesendet“. Neue Spalte `offers` (jsonb) in `cockpit_extras`. |
 | 19.10.2026 | **Archiv-Funktion**: Abgeschlossene Projekte („Ins Archiv“ in der Detailansicht) und erledigte Aufgaben („N erledigte ins Archiv“ unter der Aufgabenliste) verschwinden komplett vom Dashboard – nichts wird gelöscht. Zugriff über den Link „Archiv ansehen (N)“ über der Fußzeile bzw. den Umschalter „Archivierte Aufgaben“ im Projekt; „Zurückholen“ stellt Projekte als „On hold“ und Aufgaben in die Liste zurück. Technisch ohne Datenbankänderung (`archiv_ts` und `todos_archiv` im `data`-JSON); archivierte Projekte zählen nicht mehr für Kennzahlen, WIP-Limit und Notiz-Zuordnung. |

@@ -336,6 +336,16 @@
   }
   #cardGoals::before{transform:translateX(-50%) rotate(2deg); background:repeating-linear-gradient(45deg, rgba(196,168,130,.55) 0 8px, rgba(240,238,230,.7) 8px 16px)}
   #cardInbox::before{transform:translateX(-50%) rotate(-2deg); background:repeating-linear-gradient(45deg, rgba(44,81,99,.4) 0 8px, rgba(240,238,230,.7) 8px 16px)}
+  #cardOffers::before{transform:translateX(-50%) rotate(1.5deg); background:repeating-linear-gradient(45deg, rgba(77,122,94,.5) 0 8px, rgba(240,238,230,.7) 8px 16px)}
+
+  /* Angebote */
+  .offer-sum{font-size:13px; color:var(--ink-soft); margin:2px 0 10px; font-variant-numeric:tabular-nums}
+  .offer-st{border:0; cursor:pointer; font-size:11px; font-weight:700; padding:4px 10px; border-radius:99px; white-space:nowrap; flex:none}
+  .offer-st.offen{background:#f3e2c4; color:#8a5a18}
+  .offer-st.angenommen{background:#dce9df; color:#2f5a40}
+  .offer-st.abgelehnt{background:#e7e4dc; color:#8a8577}
+  .offer-eur{font-variant-numeric:tabular-nums; white-space:nowrap; cursor:pointer; flex:none; font-weight:600}
+  .offer-sent{color:var(--ink-soft); white-space:nowrap; flex:none; font-size:12px}
   .daily-card h3{font-family:var(--font-display); font-weight:400; font-size:22px; margin:0 0 2px; display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap}
   .daily-card h3 small{font-family:var(--font-body); font-size:12px; color:var(--ink-soft)}
   .daily-sub{font-size:12px; color:var(--ink-soft); margin:0 0 14px}
@@ -396,9 +406,9 @@
   .prio-dot.hoch{background:#ff4732}
   .prio-dot.mittel{background:var(--sand)}
   .prio-dot.niedrig{background:var(--moss)}
-  .todo .due{cursor:pointer; flex:none; position:relative}
+  .todo .due, .offer .due{cursor:pointer; flex:none; position:relative}
   .todo-addterm{position:relative; font-size:11.5px; color:var(--ink-soft); text-decoration:underline; cursor:pointer; white-space:nowrap; flex:none}
-  .todo .due input, .todo-addterm input{position:absolute; left:0; bottom:0; opacity:0; width:1px; height:1px; border:0; padding:0}
+  .todo .due input, .offer .due input, .todo-addterm input{position:absolute; left:0; bottom:0; opacity:0; width:1px; height:1px; border:0; padding:0}
   input.datefield{
     border:1.5px solid var(--line); background:var(--card); border-radius:10px;
     padding:6px 10px; font-size:13px; font-weight:600; outline:none; color-scheme:light dark;
@@ -622,6 +632,11 @@
         <span class="tg-badge" id="tgInboxBadge"></span>
         <span class="chev" aria-hidden="true">▾</span>
       </button>
+      <button class="daily-toggle" id="tgOffers" aria-expanded="false">
+        <span class="dia" aria-hidden="true"></span>Angebote
+        <span class="tg-badge" id="tgOffersBadge"></span>
+        <span class="chev" aria-hidden="true">▾</span>
+      </button>
     </div>
     <div class="daily-grid">
       <div class="daily-card" id="cardRoutine" hidden>
@@ -655,6 +670,17 @@
         <textarea class="input" id="inboxInput" placeholder="Neue Notiz schreiben …"></textarea>
         <div class="addrow" style="justify-content:flex-end; margin-top:8px">
           <button class="btn small" id="inboxAdd">Notiz speichern</button>
+        </div>
+      </div>
+      <div class="daily-card" id="cardOffers" hidden>
+        <h3>Angebote</h3>
+        <p class="daily-sub">Alle gesendeten Angebote im Blick – Status antippen zum Ändern, „Nachfassen“ setzt einen Erinnerungstermin</p>
+        <div class="offer-sum" id="offerSum"></div>
+        <div id="offerList"></div>
+        <div class="addrow" style="flex-wrap:wrap">
+          <input type="text" id="offerInput" placeholder="Neues Angebot: Kunde / Vorhaben … (Enter)" maxlength="160">
+          <input type="text" id="offerBetrag" inputmode="decimal" placeholder="€ (optional)" style="flex:0 0 110px">
+          <button class="btn small" id="offerAdd">Hinzufügen</button>
         </div>
       </div>
     </div>
@@ -1301,7 +1327,8 @@
     sb.from(EXTRAS_TABLE).update({
       routines:extras.routines, goals:extras.goals,
       routine_imgs:extras.routine_imgs||[], money_log:extras.money_log||[],
-      header_items:extras.header_items||[], updated_at:extras.updated_at
+      header_items:extras.header_items||[], offers:extras.offers||[],
+      updated_at:extras.updated_at
     }).eq("id", extras.id).then(function(r){
         if(r.error) toast("Speichern fehlgeschlagen – bitte Internetverbindung prüfen.", true);
       });
@@ -1465,6 +1492,7 @@
     var today = dateKey(new Date());
     document.getElementById("dailyDate").textContent =
       new Date().toLocaleDateString("de-DE",{weekday:"long", day:"numeric", month:"long"});
+    renderOffers();
 
     var doneToday = extras.routines.filter(function(rt){ return (rt.done||{})[today]; }).length;
     var rb = document.getElementById("tgRoutineBadge");
@@ -1585,6 +1613,130 @@
       document.getElementById("routineImgBtn").textContent = "Visionsbild wählen";
     }
   }
+  /* ── Angebote ── */
+  var OFFER_ST = {
+    offen:      {n:"Offen",      next:"angenommen"},
+    angenommen: {n:"Angenommen", next:"abgelehnt"},
+    abgelehnt:  {n:"Abgelehnt",  next:"offen"}
+  };
+  var OFFER_RANG = {offen:0, angenommen:1, abgelehnt:2};
+  function fmtEuro(x){
+    if(x===null || x===undefined || x==="") return "";
+    return Number(x).toLocaleString("de-DE", {maximumFractionDigits:2}) + " €";
+  }
+  function renderOffers(){
+    if(!extras) return;
+    var offers = extras.offers || [];
+    var offen = offers.filter(function(o){ return o.status==="offen"; });
+    var faellig = offen.filter(function(o){ return o.nf && daysUntil(o.nf) <= 0; }).length;
+    var badge = document.getElementById("tgOffersBadge");
+    badge.textContent = offers.length
+      ? (faellig ? faellig+" nachfassen!" : offen.length+" offen")
+      : "leer";
+    badge.classList.toggle("all", faellig > 0);
+
+    var summe = 0, mitBetrag = false;
+    offen.forEach(function(o){ if(o.betrag){ summe += Number(o.betrag); mitBetrag = true; } });
+    document.getElementById("offerSum").textContent = offen.length
+      ? offen.length+" offene"+(offen.length>1?" Angebote":"s Angebot")+(mitBetrag ? " · zusammen "+fmtEuro(summe) : "")
+      : "Keine offenen Angebote.";
+
+    var el = document.getElementById("offerList");
+    if(!offers.length){ el.innerHTML = '<div class="empty">Noch keine Angebote erfasst.</div>'; return; }
+    var sorted = offers.slice().sort(function(a,b){
+      var r = OFFER_RANG[a.status] - OFFER_RANG[b.status];
+      if(r) return r;
+      if(a.status==="offen"){
+        var an = a.nf||"9999-99-99", bn = b.nf||"9999-99-99";
+        if(an!==bn) return an<bn?-1:1;
+      }
+      return (a.sent||"") < (b.sent||"") ? 1 : -1;
+    });
+    el.innerHTML = sorted.map(function(o){
+      var nf = "";
+      if(o.status==="offen"){
+        if(o.nf){
+          var days = daysUntil(o.nf);
+          nf = '<label class="due '+dueClass(days)+'" title="Nachfass-Termin ändern">'
+            + 'nachfassen '+relDay(days, true)
+            + '<input type="date" value="'+o.nf+'"></label>';
+        }else{
+          nf = '<label class="todo-addterm" title="Nachfass-Termin setzen">Nachfassen<input type="date"></label>';
+        }
+      }
+      return '<div class="rrow offer'+(o.status!=="offen"?" done":"")+'" data-id="'+o.id+'">'
+        + '<button class="offer-st '+o.status+'" title="Klicken zum Ändern: Offen → Angenommen → Abgelehnt">'+OFFER_ST[o.status].n+'</button>'
+        + '<span class="edittext" title="Klicken zum Bearbeiten">'+esc(o.titel)+'</span>'
+        + '<b class="offer-eur" title="Betrag ändern">'+(o.betrag ? fmtEuro(o.betrag) : "€ …")+'</b>'
+        + '<small class="offer-sent">vom '+fmtShort(o.sent)+'</small>'
+        + nf
+        + '<button class="del" aria-label="Löschen">×</button>'
+        + '</div>';
+    }).join("");
+    el.querySelectorAll(".offer").forEach(function(row){
+      var id = row.getAttribute("data-id");
+      function findOffer(){ return (extras.offers||[]).filter(function(o){return o.id===id;})[0]; }
+      row.querySelector(".offer-st").addEventListener("click", function(){
+        var o = findOffer(); if(!o) return;
+        o.status = OFFER_ST[o.status].next;
+        persistExtras(); renderOffers();
+        if(o.status==="angenommen") toast("Angenommen – Glückwunsch! 🎉 Denk an die Geld-Aktion „Rechnung gestellt“.");
+      });
+      row.querySelector(".edittext").addEventListener("click", function(){
+        var o = findOffer(); if(!o) return;
+        openEdit({title:"Angebot bearbeiten", label:"Kunde / Vorhaben", text:o.titel, cb:function(v){
+          if(!v) return;
+          var o2 = findOffer(); if(!o2) return;
+          o2.titel = v; persistExtras(); renderOffers();
+        }});
+      });
+      row.querySelector(".offer-eur").addEventListener("click", function(){
+        var o = findOffer(); if(!o) return;
+        openEdit({title:"Betrag ändern", label:"Angebotssumme in € (leer = ohne Betrag)", text:o.betrag ? String(o.betrag).replace(".",",") : "", cb:function(v){
+          var o2 = findOffer(); if(!o2) return;
+          var b = parseFloat(v.replace(/\./g,"").replace(",","."));
+          o2.betrag = isNaN(b) ? null : b;
+          persistExtras(); renderOffers();
+        }});
+      });
+      var dateInput = row.querySelector('input[type="date"]');
+      if(dateInput){
+        dateInput.parentNode.addEventListener("click", function(e){
+          if(e.target===dateInput) return;
+          e.preventDefault();
+          try{ dateInput.showPicker(); }catch(err){ dateInput.focus(); }
+        });
+        dateInput.addEventListener("change", function(){
+          var o = findOffer(); if(!o) return;
+          o.nf = this.value || null;
+          persistExtras(); renderOffers();
+        });
+      }
+      row.querySelector(".del").addEventListener("click", function(){
+        if(!confirm("Angebot aus der Liste löschen?")) return;
+        extras.offers = (extras.offers||[]).filter(function(o){return o.id!==id;});
+        persistExtras(); renderOffers();
+      });
+    });
+  }
+  function addOffer(){
+    var inp = document.getElementById("offerInput");
+    var v = inp.value.trim(); if(!v || !extras) return;
+    var bFeld = document.getElementById("offerBetrag");
+    var b = parseFloat(bFeld.value.trim().replace(/\./g,"").replace(",","."));
+    extras.offers = extras.offers || [];
+    extras.offers.push({id:uid(), titel:v, betrag:isNaN(b)?null:b, sent:dateKey(new Date()), status:"offen", nf:null});
+    /* Ein gesendetes Angebot ist eine Geld-Aktion – automatisch mitzählen */
+    extras.money_log = extras.money_log || [];
+    extras.money_log.push({d:dateKey(new Date()), w:isoWeekKey(new Date()), t:"angebot"});
+    inp.value = ""; bFeld.value = "";
+    persistExtras(); renderOffers(); renderMoney();
+    toast("Angebot erfasst – zählt auch als Geld-Aktion 💪");
+  }
+  document.getElementById("offerAdd").addEventListener("click", addOffer);
+  document.getElementById("offerInput").addEventListener("keydown", function(e){ if(e.key==="Enter") addOffer(); });
+  document.getElementById("offerBetrag").addEventListener("keydown", function(e){ if(e.key==="Enter") addOffer(); });
+
   function addRoutine(){
     var inp = document.getElementById("routineInput");
     var v = inp.value.trim(); if(!v || !extras) return;
@@ -1609,6 +1761,7 @@
   bindDailyToggle("tgRoutine", "cardRoutine");
   bindDailyToggle("tgGoals", "cardGoals");
   bindDailyToggle("tgInbox", "cardInbox", function(){ loadInbox(); });
+  bindDailyToggle("tgOffers", "cardOffers");
 
   /* Schnell-Erfassung oben: landet in den Notizen */
   function captureNote(){
