@@ -678,7 +678,7 @@
         <div class="offer-sum" id="offerSum"></div>
         <div id="offerList"></div>
         <div class="addrow" style="flex-wrap:wrap">
-          <input type="text" id="offerInput" placeholder="Neues Angebot: Kunde / Vorhaben … (Enter)" maxlength="160">
+          <textarea class="input" id="offerInput" placeholder="Neues Angebot: Kunde, Vorhaben, Details … (Enter legt an, Umschalt+Enter = neue Zeile)" maxlength="1000" style="flex:1 1 100%; min-height:64px"></textarea>
           <input type="text" id="offerBetrag" inputmode="decimal" placeholder="€ (optional)" style="flex:0 0 110px">
           <button class="btn small" id="offerAdd">Hinzufügen</button>
         </div>
@@ -1327,7 +1327,10 @@
     sb.from(EXTRAS_TABLE).update({
       routines:extras.routines, goals:extras.goals,
       routine_imgs:extras.routine_imgs||[], money_log:extras.money_log||[],
-      header_items:extras.header_items||[], offers:extras.offers||[],
+      header_items:extras.header_items||[],
+      /* Schutz: offers nur mitschreiben, wenn die Angebotsliste wirklich geladen wurde –
+         sonst würde eine veraltete Sitzung die Angebote leeren */
+      offers:Array.isArray(extras.offers) ? extras.offers : undefined,
       updated_at:extras.updated_at
     }).eq("id", extras.id).then(function(r){
         if(r.error) toast("Speichern fehlgeschlagen – bitte Internetverbindung prüfen.", true);
@@ -1666,7 +1669,7 @@
       }
       return '<div class="rrow offer'+(o.status!=="offen"?" done":"")+'" data-id="'+o.id+'">'
         + '<button class="offer-st '+o.status+'" title="Klicken zum Ändern: Offen → Angenommen → Abgelehnt">'+OFFER_ST[o.status].n+'</button>'
-        + '<span class="edittext" title="Klicken zum Bearbeiten">'+esc(o.titel)+'</span>'
+        + '<span class="edittext" style="white-space:pre-wrap" title="Klicken zum Bearbeiten">'+esc(o.titel)+'</span>'
         + '<b class="offer-eur" title="Betrag ändern">'+(o.betrag ? fmtEuro(o.betrag) : "€ …")+'</b>'
         + '<small class="offer-sent">vom '+fmtShort(o.sent)+'</small>'
         + nf
@@ -1734,7 +1737,9 @@
     toast("Angebot erfasst – zählt auch als Geld-Aktion 💪");
   }
   document.getElementById("offerAdd").addEventListener("click", addOffer);
-  document.getElementById("offerInput").addEventListener("keydown", function(e){ if(e.key==="Enter") addOffer(); });
+  document.getElementById("offerInput").addEventListener("keydown", function(e){
+    if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); addOffer(); }
+  });
   document.getElementById("offerBetrag").addEventListener("keydown", function(e){ if(e.key==="Enter") addOffer(); });
 
   function addRoutine(){

@@ -132,7 +132,9 @@ Kompakte Buttons mit Stand-Anzeige, die Karten erst auf Klick ausklappen
   Projekt verschoben (wird dort ein To-do mit Priorität Mittel) oder über ×
   gelöscht werden. Button-Badge: „N neu“.
 - **Angebote** – kleine Angebots-Verfolgung (Spalte `offers` in
-  `cockpit_extras`). Pro Angebot: Kunde/Vorhaben, optionaler **Betrag**,
+  `cockpit_extras`). Erfasst wird über ein **großes, mehrzeiliges Textfeld**
+  (bis 1000 Zeichen; Enter legt an, Umschalt+Enter macht eine neue Zeile).
+  Pro Angebot: Kunde/Vorhaben mit beliebig vielen Details, optionaler **Betrag**,
   Sendedatum (automatisch der Erfassungstag), **Status** als Pille zum
   Durchklicken (Offen → Angenommen → Abgelehnt; nicht-offene sinken ans Ende
   und werden ausgegraut) und ein optionaler **Nachfass-Termin** mit Countdown
